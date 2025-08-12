@@ -1,5 +1,7 @@
 // src/components/Topbar.tsx
 "use client";
+
+import Link from "next/link";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount, useBalance, useReadContract } from "wagmi";
 import { erc721Abi } from "@/lib/abi/erc721";
@@ -17,9 +19,35 @@ function Chip({ children }: { children: React.ReactNode }) {
   );
 }
 
+function ChipLink({
+  href,
+  title,
+  children,
+}: {
+  href: string;
+  title?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      title={title}
+      aria-label={title}
+      className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1 text-xs hover:bg-white/15 transition-colors"
+    >
+      {children}
+    </Link>
+  );
+}
+
 export default function Topbar() {
   const { address, isConnected } = useAccount();
-  const { data: nativeBal } = useBalance({ address, query: { enabled: isConnected } });
+
+  const { data: nativeBal } = useBalance({
+    address,
+    query: { enabled: isConnected },
+  });
+
   const { data: ipCount } = useReadContract({
     abi: erc721Abi,
     address: SPG_COLLECTION,
@@ -31,20 +59,31 @@ export default function Topbar() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-transparent backdrop-blur">
       <div className="mx-auto max-w-6xl px-6 h-16 flex items-center justify-between">
-        <h1 className="text-lg sm:text-xl font-semibold tracking-tight">Superlee AI Agent</h1>
+        <h1 className="text-lg sm:text-xl font-semibold tracking-tight">
+          Superlee AI Agent
+        </h1>
+
         <div className="flex items-center gap-2">
           {isConnected && (
             <>
+              {/* Native balance chip */}
               <Chip>
-                <strong>{nativeBal?.formatted ? Number(nativeBal.formatted).toFixed(2) : "—"}</strong>
+                <strong>
+                  {nativeBal?.formatted
+                    ? Number(nativeBal.formatted).toFixed(2)
+                    : "—"}
+                </strong>
                 <span className="opacity-70">{nativeBal?.symbol || "IP"}</span>
               </Chip>
-              <Chip>
+
+              {/* Link to Dashboard */}
+              <ChipLink href="/dashboard" title="View your registered IPs">
                 <strong>{ipCount ? (ipCount as bigint).toString() : "—"}</strong>
                 <span className="opacity-70">IP Registered</span>
-              </Chip>
+              </ChipLink>
             </>
           )}
+
           <ThemeToggle />
           <ConnectButton />
         </div>

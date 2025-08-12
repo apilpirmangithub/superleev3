@@ -112,7 +112,17 @@ export default function PromptAgent() {
 
         setStatus("Upload metadata...");
         const upMeta = await fetch("/api/ipfs/json", { method: "POST", headers: {"content-type":"application/json"}, body: JSON.stringify(ipMeta) }).then(r=>r.json());
-        const nftMeta = { name: `IP Ownership — ${ipMeta.title}`, description: "Ownership NFT for IP Asset", image: upFile.url };
+        // setelah upload ipMeta => upMeta.url
+const nftMeta = {
+  name: `IP Ownership — ${ipMeta.title}`,
+  description: "Ownership NFT for IP Asset",
+  image: upFile.url,
+  ipMetadataURI: upMeta.url,                     // <— pointer langsung ke IP metadata
+  attributes: [
+    { trait_type: "ip_metadata_uri", value: upMeta.url } // fallback
+  ]
+};
+
         const upNft = await fetch("/api/ipfs/json", { method: "POST", headers: {"content-type":"application/json"}, body: JSON.stringify(nftMeta) }).then(r=>r.json());
 
         setStatus("Register on Story...");
