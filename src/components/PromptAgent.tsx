@@ -1,16 +1,28 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAccount, useChainId, useSwitchChain } from "wagmi";
 import { decide } from "@/lib/agent/engine";
-import { getDecimals, getQuote, approveForAggregator, swapViaAggregator } from "@/lib/piperx";
+import {
+  getDecimals,
+  getQuote,
+  approveForAggregator,
+  swapViaAggregator,
+} from "@/lib/piperx";
 import { useStoryClient } from "@/lib/storyClient";
 import { storyAeneid } from "@/lib/chains/story";
 import { Paperclip, Check, X, Send } from "lucide-react";
-import { parseUnits, toHex } from "viem";
+import { parseUnits, toHex, keccak256 } from "viem";
 
 /* ---------- utils: hash ---------- */
+function bytesKeccak(data: Uint8Array): `0x${string}` {
+  return keccak256(toHex(data)) as `0x${string}`;
+}
+async function keccakOfJson(obj: any): Promise<`0x${string}`> {
+  const json = JSON.stringify(obj);
+  return bytesKeccak(new TextEncoder().encode(json));
+}
 async function sha256HexOfFile(file: File): Promise<`0x${string}`> {
   const buf = await file.arrayBuffer();
   const hash = await crypto.subtle.digest("SHA-256", buf);
@@ -36,7 +48,7 @@ function toIpfsUri(cidOrUrl?: string) {
   return `ipfs://${cid}` as const;
 }
 
-/* ---------- utils: fetch JSON dengan pesan error enak ---------- */
+/* ---------- utils: fetch JSON (error-friendly) ---------- */
 async function fetchJSON(input: RequestInfo | URL, init?: RequestInit) {
   const r = await fetch(input, init);
   const text = await r.text();
@@ -51,7 +63,7 @@ async function fetchJSON(input: RequestInfo | URL, init?: RequestInit) {
   }
 }
 
-/* ---------- utils: kompres gambar sebelum upload ---------- */
+/* ---------- utils: image compress before upload ---------- */
 async function compressImage(
   file: File,
   opts: { maxDim?: number; quality?: number; targetMaxBytes?: number } = {}
@@ -79,24 +91,31 @@ type Msg = { role: "you" | "agent"; text: string; ts: number };
 export default function PromptAgent() {
   const { isConnected, address } = useAccount();
   const { getClient } = useStoryClient();
+
   const chainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
 
+  // ---- UI state ----
   const [prompt, setPrompt] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
+  // ---- Chat state ----
   const [messages, setMessages] = useState<Msg[]>([]);
   const [plan, setPlan] = useState<string[] | null>(null);
   const [intent, setIntent] = useState<any>(null);
   const [status, setStatus] = useState<string>("");
   const [toast, setToast] = useState<string | null>(null);
-  const chatRef = useRef<HTMLDivElement>(null);
+
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   const explorerBase = storyAeneid.blockExplorers?.default.url || "https://aeneid.storyscan.xyz";
 
+  const canSend = isConnected && prompt.trim().length > 0;
+
+  // ---- helpers ----
   function push(role: Msg["role"], text: string) {
     setMessages((m) => [...m, { role, text, ts: Date.now() }]);
   }
@@ -128,20 +147,22 @@ export default function PromptAgent() {
       try {
         await switchChainAsync({ chainId: 1315 });
       } catch {
-        /* user mungkin cancel */
+        /* user mungkin cancel; lanjut tapi tx bisa gagal */
       }
     }
   }
 
-  // effects
+  // ---- effects ----
   useEffect(() => { if (taRef.current) handleAutoGrow(taRef.current); }, [prompt]);
-  useEffect(() => { chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" }); }, [messages]);
+  useEffect(() => {
+    chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, plan]);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 3500); return () => clearTimeout(t); }, [toast]);
   useEffect(() => { try { const s = localStorage.getItem("agentMessages"); if (s) setMessages(JSON.parse(s)); } catch {} }, []);
   useEffect(() => { try { localStorage.setItem("agentMessages", JSON.stringify(messages)); } catch {} }, [messages]);
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
-  // actions
+  // ---- actions ----
   function onRun() {
     const p = prompt.trim();
     if (!p) return;
@@ -158,6 +179,7 @@ export default function PromptAgent() {
     setPlan(d.plan);
     setIntent(d.intent);
     push("agent", ["Plan:", ...d.plan.map((s: string, i: number) => `${i + 1}. ${s}`)].join("\n"));
+    setPrompt(""); // ChatGPT-like: kosongkan input setelah kirim
   }
 
   async function onConfirm() {
@@ -183,12 +205,15 @@ export default function PromptAgent() {
         const tx = await swapViaAggregator(q.universalRoutes);
 
         setStatus("Done");
-        push("agent", `Swap success ✅
+        push(
+          "agent",
+          `Swap success ✅
 From: ${intent.tokenIn}
 To: ${intent.tokenOut}
 Amount: ${intent.amount}
 Tx: ${tx.hash}
-↗ View: ${explorerBase}/tx/${tx.hash}`);
+↗ View: ${explorerBase}/tx/${tx.hash}`
+        );
         setToast("Swap success ✅");
         clearPlan();
       } catch (e: any) {
@@ -205,7 +230,6 @@ Tx: ${tx.hash}
           setToast("Attach image dulu 📎");
           return;
         }
-
         await ensureAeneid();
 
         // 1) Kompres jika besar, lalu upload
@@ -217,11 +241,11 @@ Tx: ${tx.hash}
         fd.append("file", fileToUpload, fileToUpload.name);
 
         const upFile = await fetchJSON("/api/ipfs/file", { method: "POST", body: fd });
-        const imageCid = extractCid(upFile.cid || upFile.IpfsHash || upFile.url);
+        const imageCid = extractCid(upFile.cid || upFile.url);
         const imageGateway = toHttps(imageCid);
         const fileSha256 = await sha256HexOfFile(fileToUpload);
 
-        // 2) IP metadata → upload via server (server menghitung keccak)
+        // 2) IP metadata
         const ipMeta = {
           title: intent.title || fileToUpload.name,
           description: intent.prompt || "",
@@ -240,11 +264,11 @@ Tx: ${tx.hash}
           headers: { "content-type": "application/json" },
           body: JSON.stringify(ipMeta),
         });
-        const ipMetaCid = extractCid(upMeta.cid || upMeta.IpfsHash || upMeta.url);
+        const ipMetaCid = extractCid(upMeta.cid || upMeta.url);
         const ipMetadataURI = toIpfsUri(ipMetaCid);
-        const ipMetadataHash = upMeta.keccak as `0x${string}`; // ✅ pakai hash dari server
+        const ipMetadataHash = await keccakOfJson(ipMeta);
 
-        // 3) NFT metadata (pointer ipfs:// ke IP meta) → upload via server
+        // 3) NFT metadata (pointer ipfs:// ke IP meta)
         const nftMeta = {
           name: `IP Ownership — ${ipMeta.title}`,
           description: "Ownership NFT for IP Asset",
@@ -259,9 +283,9 @@ Tx: ${tx.hash}
           headers: { "content-type": "application/json" },
           body: JSON.stringify(nftMeta),
         });
-        const nftMetaCid = extractCid(upNft.cid || upNft.IpfsHash || upNft.url);
+        const nftMetaCid = extractCid(upNft.cid || upNft.url);
         const nftMetadataURI = toIpfsUri(nftMetaCid);
-        const nftMetadataHash = upNft.keccak as `0x${string}`; // ✅ pakai hash dari server
+        const nftMetadataHash = await keccakOfJson(nftMeta);
 
         // 4) Register on Story
         setStatus("Register on Story...");
@@ -300,70 +324,96 @@ NFT Metadata: ${toHttps(nftMetaCid)}
     }
   }
 
-  const canSend = isConnected && prompt.trim().length > 0;
-
-  // UI
+  // ---- UI (ChatGPT-like) ----
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-6">
-      {/* HISTORY LEFT */}
-      <aside className="card h-[360px] overflow-auto scrollbar-invisible">
-        <div className="text-sm text-white/70 mb-2">History</div>
-        <ul className="space-y-2 pr-1">
-          {messages
-            .filter((m: Msg) => m.role === "you")
-            .map((m: Msg, i: number) => (
-              <li key={i} className="text-sm text-white/90">
-                {m.text}
-              </li>
-            ))}
-        </ul>
-      </aside>
-
-      {/* CHAT + PROMPT RIGHT */}
-      <section className="space-y-4">
-        <div ref={chatRef} className="card h-[360px] overflow-auto scrollbar-invisible">
-          {messages.map((m: Msg, i: number) => {
-  const isYou = m.role === "you";
-  const isError =
-    /^(\w+\s)?error/i.test(m.text) ||
-    m.text.toLowerCase().startsWith("register error") ||
-    m.text.toLowerCase().startsWith("swap error");
-
-  return (
-    <div key={i} className={`flex ${isYou ? "justify-end" : "justify-start"}`}>
-      <div
-        className={[
-          // lebar bubble dikunci agar tidak “mendorong” panel
-          "max-w-[min(720px,75%)] rounded-2xl px-4 py-3 border shadow-sm",
-          isYou
-            ? "bg-sky-500/15 border-sky-400/30"
-            : "bg-white/5 border-white/10",
-          isError && "bg-red-500/10 border-red-400/30"
-        ].filter(Boolean).join(" ")}
-      >
-        {/* isi pesan */}
-        <pre
-          className={[
-            "msg-pre text-sm leading-relaxed",
-            // cegah bubble melar: batasi tinggi & scroll Y jika kepanjangan
-            "max-h-64 sm:max-h-80 overflow-y-auto",
-            // dan kalau masih ada baris super panjang, scroll X saja
-            "overflow-x-auto"
-          ].join(" ")}
-        >
-{m.text}
-        </pre>
-      </div>
-    </div>
-  );
-})}
-
+    <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr] gap-6">
+      {/* ===== SIDEBAR HISTORY (kiri) ===== */}
+      <aside className="card p-0 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <div className="text-sm font-medium opacity-90">History</div>
+          <button
+            className="text-xs rounded-lg border border-white/15 px-2 py-1 hover:bg-white/10"
+            onClick={() => setMessages([])}
+            title="New chat"
+          >
+            New
+          </button>
         </div>
 
-        {/* PROMPT BAR + MASCOT */}
-        <div className="card relative overflow-visible space-y-3">
+        <div className="h-[420px] overflow-y-auto scrollbar-invisible p-2">
+          {messages.filter(m => m.role === "you").length === 0 ? (
+            <div className="text-xs opacity-70 px-2 py-3">
+              There are no interactions yet. Write the prompt on the right.
+            </div>
+          ) : (
+            <ul className="space-y-1">
+              {messages
+                .filter((m) => m.role === "you")
+                .map((m, i) => (
+                  <li key={`${m.ts}-${i}`}>
+                    <button
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 text-sm truncate"
+                      title={m.text}
+                      onClick={() => setPrompt(m.text)}
+                    >
+                      {m.text}
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+      </aside>
+
+      {/* ===== MAIN CHAT (kanan) ===== */}
+      <section className="card p-0 overflow-hidden relative">
+        {/* Messages area */}
+        <div
+          ref={chatScrollRef}
+          className="h-[520px] flex flex-col gap-3 overflow-y-auto px-4 pt-4 pb-2 scrollbar-invisible"
+        >
+          {messages.length === 0 ? (
+            <div className="text-xs text-white/60">
+              AI replies will appear here. Try:{" "}
+              <span className="badge">Swap 1 WIP &gt; USDC slippage 0.5%</span>{" "}
+              or{" "}
+              <span className="badge">Register this image IP, title "Sunset" by-nc</span>.
+            </div>
+          ) : (
+            messages.map((m: Msg, i: number) => {
+              const isYou = m.role === "you";
+              const isError =
+                /^(\w+\s)?error/i.test(m.text) ||
+                m.text.toLowerCase().startsWith("register error") ||
+                m.text.toLowerCase().startsWith("swap error");
+
+              return (
+                <div key={i} className={`flex ${isYou ? "justify-end" : "justify-start"}`}>
+                  <div
+                    className={[
+                      "max-w-[min(720px,85%)] rounded-2xl px-4 py-3 border shadow-sm",
+                      isYou
+                        ? "bg-sky-500/15 border-sky-400/30"
+                        : "bg-white/5 border-white/10",
+                      isError && "bg-red-500/10 border-red-400/30",
+                    ].join(" ")}
+                  >
+                    <pre
+                      className="msg-pre text-sm leading-relaxed max-h-64 sm:max-h-80 overflow-y-auto overflow-x-auto"
+                    >
+{m.text}
+                    </pre>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Input bar (sticky bottom, ChatGPT-like) */}
+        <div className="sticky bottom-0 w-full border-t border-white/10 bg-[color:var(--ai-card)] backdrop-blur px-3 py-3">
           <div className="flex items-end gap-2">
-            {/* ATTACH */}
+            {/* ATTACH (ghost) */}
             <button
               aria-label="Attach image"
               title="Attach Image (for Register IP)"
@@ -387,10 +437,7 @@ NFT Metadata: ${toHttps(nftMetaCid)}
               className="flex-1 resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base sm:text-lg placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-400/40 scrollbar-invisible"
               placeholder='Swap 1 WIP > USDC slippage 0.5%  |  Register this image IP, title "Sunset" by-nc'
               value={prompt}
-              onChange={(e) => {
-                setPrompt(e.target.value);
-                handleAutoGrow(e.currentTarget);
-              }}
+              onChange={(e) => { setPrompt(e.target.value); handleAutoGrow(e.currentTarget); }}
               onKeyDown={(e) => e.key === "Enter" && (e.ctrlKey || e.metaKey) && onRun()}
             />
 
@@ -405,8 +452,8 @@ NFT Metadata: ${toHttps(nftMetaCid)}
             </button>
           </div>
 
-          {/* Preview & status */}
-          <div className="flex items-center gap-3">
+          {/* Preview & status row */}
+          <div className="flex items-center gap-3 mt-2">
             {previewUrl && (
               <div className="flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -422,48 +469,50 @@ NFT Metadata: ${toHttps(nftMetaCid)}
             )}
             {status && <span className="text-xs text-white/60">{status}</span>}
           </div>
-
-          {/* Mascot */}
-          <Image
-            src="/brand/superlee-sprite.png"
-            alt=""
-            width={280}
-            height={280}
-            priority
-            className="
-              pointer-events-none select-none pixelated animate-float
-              absolute -top-2 -right-2 z-10
-              w-[clamp(40px,8vmin,96px)]
-              opacity-80 sm:opacity-90
-              drop-shadow-[0_10px_28px_rgba(34,211,238,.35)]
-            "
-          />
         </div>
 
-        {/* Plan & actions */}
-        {plan && (
-          <div className="card space-y-3">
-            <div className="text-sm text-white/70">Plan</div>
-            <ol className="list-decimal pl-5 space-y-1 text-sm">
-              {plan.map((p: string, i: number) => (
-                <li key={i}>{p}</li>
-              ))}
-            </ol>
-            <div className="flex gap-2">
-              <button
-                className="rounded-2xl bg-sky-500/90 hover:bg-sky-400 text-white px-4 py-2 inline-flex items-center gap-2"
-                onClick={onConfirm}
-              >
-                <Check className="h-4 w-4" /> Confirm
-              </button>
-              <button className="rounded-2xl border border-white/10 px-4 py-2 inline-flex items-center gap-2" onClick={clearPlan}>
-                <X className="h-4 w-4" /> Cancel
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Mascot kecil di pojok kanan atas panel chat */}
+        <Image
+          src="/brand/superlee-sprite.png"
+          alt=""
+          width={280}
+          height={280}
+          priority
+          className="
+            pointer-events-none select-none pixelated animate-float
+            absolute -top-2 -right-2 z-10
+            w-[clamp(40px,8vmin,96px)]
+            opacity-80 sm:opacity-90
+            drop-shadow-[0_10px_28px_rgba(34,211,238,.35)]
+          "
+        />
       </section>
 
+      {/* Plan & actions (muncul di bawah chat, tetap terpisah agar jelas) */}
+      {plan && (
+        <div className="lg:col-start-2 card space-y-3">
+          <div className="text-sm text-white/70">Plan</div>
+          <ol className="list-decimal pl-5 space-y-1 text-sm">
+            {plan.map((p: string, i: number) => (<li key={i}>{p}</li>))}
+          </ol>
+          <div className="flex gap-2">
+            <button
+              className="rounded-2xl bg-sky-500/90 hover:bg-sky-400 text-white px-4 py-2 inline-flex items-center gap-2"
+              onClick={onConfirm}
+            >
+              <Check className="h-4 w-4" /> Confirm
+            </button>
+            <button
+              className="rounded-2xl border border-white/10 px-4 py-2 inline-flex items-center gap-2"
+              onClick={clearPlan}
+            >
+              <X className="h-4 w-4" /> Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 rounded-xl bg-black/70 border border-white/10 px-4 py-3 text-sm shadow-glow">
           {toast}
