@@ -1,32 +1,41 @@
 // src/app/api/ipfs/file/route.ts
-import { NextRequest } from "next/server";
 import { PinataSDK } from "pinata-web3";
 
 export const runtime = "nodejs";
 
 const pinata = new PinataSDK({
-  pinataJwt: process.env.PINATA_JWT!,            // set in .env(.local) & Vercel
-  pinataGateway: process.env.PINATA_GATEWAY!,    // e.g. "your-gw.mypinata.cloud"
+  pinataJwt: process.env.PINATA_JWT!,          // contoh: "Bearer eyJ..."
+  pinataGateway: process.env.PINATA_GATEWAY!,  // contoh: "your-sub.mypinata.cloud" (tanpa http)
 });
 
-export async function POST(req: NextRequest) {
+function buildGatewayUrl(cid: string) {
+  const gw = process.env.PINATA_GATEWAY!;
+  const host = gw.startsWith("http") ? gw.replace(/\/+$/, "") : `https://${gw}`;
+  return `${host}/ipfs/${cid}`;
+}
+
+export async function POST(req: Request) {
   try {
-    const form = await req.formData();
-    const file = form.get("file");
-    if (!(file instanceof File)) {
+    // ✅ CAST ke any supaya TS tidak protes .get saat build Vercel
+    const form: any = await req.formData();
+    const maybeFile = form?.get?.("file") ?? null;
+    const file = (maybeFile instanceof File) ? (maybeFile as File) : null;
+
+    if (!file) {
       return new Response("No file", { status: 400 });
     }
 
-    // pinata-web3 returns { IpfsHash, PinSize, Timestamp }
+    // pinata-web3 → { IpfsHash, PinSize, Timestamp }
     const up = await pinata.upload.file(file);
     const cid = up.IpfsHash;
-    const url = `https://${process.env.PINATA_GATEWAY}/ipfs/${cid}`;
+    const url = buildGatewayUrl(cid);
 
     return Response.json({
       cid,
       url,
-      hash: cid,        // keep backward-compat for your frontend
-      IpfsHash: cid,    // raw field from SDK
+      // alias untuk kompatibilitas kode frontend kamu:
+      hash: cid,
+      IpfsHash: cid,
       PinSize: up.PinSize,
       Timestamp: up.Timestamp,
     });

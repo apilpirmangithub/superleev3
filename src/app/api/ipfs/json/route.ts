@@ -1,5 +1,4 @@
 // src/app/api/ipfs/json/route.ts
-import { NextRequest } from "next/server";
 import { PinataSDK } from "pinata-web3";
 
 export const runtime = "nodejs";
@@ -9,22 +8,29 @@ const pinata = new PinataSDK({
   pinataGateway: process.env.PINATA_GATEWAY!,
 });
 
-export async function POST(req: NextRequest) {
+function buildGatewayUrl(cid: string) {
+  const gw = process.env.PINATA_GATEWAY!;
+  const host = gw.startsWith("http") ? gw.replace(/\/+$/, "") : `https://${gw}`;
+  return `${host}/ipfs/${cid}`;
+}
+
+export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // pinata-web3 doesn’t have `upload.json`, so wrap as a File
+    // Upload JSON sebagai File (pinata-web3 tidak punya upload.json)
     const blob = new Blob([JSON.stringify(body)], { type: "application/json" });
     const file = new File([blob], "metadata.json", { type: "application/json" });
 
     const up = await pinata.upload.file(file);
     const cid = up.IpfsHash;
-    const url = `https://${process.env.PINATA_GATEWAY}/ipfs/${cid}`;
+    const url = buildGatewayUrl(cid);
 
     return Response.json({
       cid,
       url,
-      hash: cid,        // for your Story call (ipMetadataHash/nftMetadataHash mapping)
+      // alias kompatibilitas
+      hash: cid,
       IpfsHash: cid,
       PinSize: up.PinSize,
       Timestamp: up.Timestamp,

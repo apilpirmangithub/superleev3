@@ -1,3 +1,4 @@
+// next.config.mjs
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -8,7 +9,16 @@ const nextConfig = {
     ],
   },
   webpack: (config) => {
-    config.resolve.fallback = { ...(config.resolve.fallback || {}), encoding: false };
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      'pino-pretty': false,     // hilangkan warning modul optional
+      'react-native': false,    // kalau tidak dipakai
+      '@metamask/sdk': false,   // jika tidak pakai MetaMask SDK langsung (cukup injected)
+    };
+    config.resolve.fallback = {
+      ...(config.resolve.fallback || {}),
+      encoding: false,          // hilangkan warning "encoding"
+    };
     return config;
   },
 };
