@@ -1,36 +1,36 @@
-import { NextRequest, NextResponse } from "next/server";
-import PinataSDK from "pinata-web3";
+// src/app/api/ipfs/file/route.ts
+import { NextRequest } from "next/server";
+import { PinataSDK } from "pinata-web3";
 
-export const runtime = "nodejs";       // pastikan Node runtime (bukan Edge)
-export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const pinata = new PinataSDK({
+  pinataJwt: process.env.PINATA_JWT!,            // set in .env(.local) & Vercel
+  pinataGateway: process.env.PINATA_GATEWAY!,    // e.g. "your-gw.mypinata.cloud"
+});
 
 export async function POST(req: NextRequest) {
   try {
-    const pinata = new PinataSDK({
-      pinataJwt: process.env.PINATA_JWT!,           // contoh: "Bearer eyJ..."
-      pinataGateway: process.env.PINATA_GATEWAY,    // contoh: "https://<sub>.mypinata.cloud/ipfs/"
-    });
-
-    // TS guard: cast ke any agar .get tidak error saat build
-    const form: any = await req.formData();
-    const file = form.get("file") as File | null;
-    if (!file) {
-      return NextResponse.json({ error: "No file" }, { status: 400 });
+    const form = await req.formData();
+    const file = form.get("file");
+    if (!(file instanceof File)) {
+      return new Response("No file", { status: 400 });
     }
 
-    // upload ke Pinata
+    // pinata-web3 returns { IpfsHash, PinSize, Timestamp }
     const up = await pinata.upload.file(file);
-    const cid = up?.IpfsHash || up?.cid || up?.hash || up?.ipfsHash;
-    if (!cid) {
-      return NextResponse.json({ error: "Upload failed" }, { status: 500 });
-    }
+    const cid = up.IpfsHash;
+    const url = `https://${process.env.PINATA_GATEWAY}/ipfs/${cid}`;
 
-    // bangun URL gateway (fallback ke ipfs.io)
-    const base = (process.env.PINATA_GATEWAY || "https://ipfs.io/ipfs/").replace(/\/+$/, "");
-    const url = base.includes("/ipfs/") ? `${base}/${cid}` : `${base}/ipfs/${cid}`;
-
-    return NextResponse.json({ cid, url });
+    return Response.json({
+      cid,
+      url,
+      hash: cid,        // keep backward-compat for your frontend
+      IpfsHash: cid,    // raw field from SDK
+      PinSize: up.PinSize,
+      Timestamp: up.Timestamp,
+    });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Upload error" }, { status: 500 });
+    return new Response(e?.message || "Upload error", { status: 500 });
   }
 }

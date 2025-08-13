@@ -7,7 +7,9 @@ const nextConfig = {
       { protocol: 'https', hostname: 'gateway.pinata.cloud' },
     ],
   },
-  // tambahkan opsi lain kalau perlu
+  webpack: (config) => {
+    config.resolve.fallback = { ...(config.resolve.fallback || {}), encoding: false };
+    return config;
+  },
 };
-
 export default nextConfig;
