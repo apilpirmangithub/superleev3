@@ -4,18 +4,13 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useAccount, useChainId, useSwitchChain } from "wagmi";
 import { decide } from "@/lib/agent/engine";
-import {
-  getDecimals,
-  getQuote,
-  approveForAggregator,
-  swapViaAggregator,
-} from "@/lib/piperx";
+import { getDecimals, getQuote, approveForAggregator, swapViaAggregator } from "@/lib/piperx";
 import { useStoryClient } from "@/lib/storyClient";
 import { storyAeneid } from "@/lib/chains/story";
 import { Paperclip, Check, X, Send } from "lucide-react";
 import { parseUnits, toHex, keccak256 } from "viem";
 
-/* ---------- utils ---------- */
+/* ---------- utils: hash ---------- */
 function bytesKeccak(data: Uint8Array): `0x${string}` {
   return keccak256(toHex(data)) as `0x${string}`;
 }
@@ -29,12 +24,13 @@ async function sha256HexOfFile(file: File): Promise<`0x${string}`> {
   return toHex(new Uint8Array(hash), { size: 32 });
 }
 
+/* ---------- utils: IPFS URL helpers ---------- */
 function extractCid(u?: string): string {
   if (!u) return "";
   if (u.startsWith("ipfs://")) return u.slice(7);
   const m = u.match(/\/ipfs\/([^/?#]+)/i);
   if (m?.[1]) return m[1];
-  return u; // assume CID already
+  return u;
 }
 function toHttps(cidOrUrl?: string) {
   if (!cidOrUrl) return "";
@@ -47,18 +43,44 @@ function toIpfsUri(cidOrUrl?: string) {
   return `ipfs://${cid}` as const;
 }
 
-/** Safe JSON fetcher that never throws "Unexpected token" on HTML/text errors */
+/* ---------- utils: fetch JSON dengan pesan error enak ---------- */
 async function fetchJSON(input: RequestInfo | URL, init?: RequestInit) {
   const r = await fetch(input, init);
   const text = await r.text();
   if (!r.ok) {
-    throw new Error(`HTTP ${r.status}: ${text?.slice(0, 200)}`);
+    // Kasus umum di Vercel saat upload besar: 413 Request Entity Too Large
+    // Atau 401/403 Auth Pinata
+    const head = text?.slice(0, 200);
+    throw new Error(`HTTP ${r.status}${r.statusText ? " " + r.statusText : ""}: ${head}`);
   }
   try {
     return JSON.parse(text);
   } catch {
     throw new Error(`Server returned non-JSON: ${text?.slice(0, 200)}`);
   }
+}
+
+/* ---------- utils: kompres gambar sebelum upload ---------- */
+async function compressImage(
+  file: File,
+  opts: { maxDim?: number; quality?: number; targetMaxBytes?: number } = {}
+): Promise<File> {
+  const { maxDim = 1600, quality = 0.85, targetMaxBytes = 3.5 * 1024 * 1024 } = opts;
+  if (file.size <= targetMaxBytes) return file;
+
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bmp.width * scale);
+  canvas.height = Math.round(bmp.height * scale);
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+
+  const blob: Blob = await new Promise((res) =>
+    canvas.toBlob((b) => res(b as Blob), "image/webp", quality)
+  );
+  const name = (file.name.replace(/\.\w+$/, "") || "image") + ".webp";
+  return new File([blob], name, { type: "image/webp" });
 }
 
 type Msg = { role: "you" | "agent"; text: string; ts: number };
@@ -82,8 +104,7 @@ export default function PromptAgent() {
   const [toast, setToast] = useState<string | null>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
-  const explorerBase =
-    storyAeneid.blockExplorers?.default.url || "https://aeneid.storyscan.xyz";
+  const explorerBase = storyAeneid.blockExplorers?.default.url || "https://aeneid.storyscan.xyz";
 
   function push(role: Msg["role"], text: string) {
     setMessages((m) => [...m, { role, text, ts: Date.now() }]);
@@ -116,66 +137,36 @@ export default function PromptAgent() {
       try {
         await switchChainAsync({ chainId: 1315 });
       } catch {
-        /* user can cancel; tx may fail then */
+        /* user mungkin cancel */
       }
     }
   }
 
-  /* effects */
-  useEffect(() => {
-    if (taRef.current) handleAutoGrow(taRef.current);
-  }, [prompt]);
-  useEffect(() => {
-    chatRef.current?.scrollTo({
-      top: chatRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  }, [messages]);
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3500);
-    return () => clearTimeout(t);
-  }, [toast]);
-  useEffect(() => {
-    try {
-      const s = localStorage.getItem("agentMessages");
-      if (s) setMessages(JSON.parse(s));
-    } catch {}
-  }, []);
-  useEffect(() => {
-    try {
-      localStorage.setItem("agentMessages", JSON.stringify(messages));
-    } catch {}
-  }, [messages]);
-  useEffect(
-    () => () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    },
-    [previewUrl]
-  );
+  // effects
+  useEffect(() => { if (taRef.current) handleAutoGrow(taRef.current); }, [prompt]);
+  useEffect(() => { chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" }); }, [messages]);
+  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 3500); return () => clearTimeout(t); }, [toast]);
+  useEffect(() => { try { const s = localStorage.getItem("agentMessages"); if (s) setMessages(JSON.parse(s)); } catch {} }, []);
+  useEffect(() => { try { localStorage.setItem("agentMessages", JSON.stringify(messages)); } catch {} }, [messages]);
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
-  /* actions */
+  // actions
   function onRun() {
     const p = prompt.trim();
     if (!p) return;
     push("you", p);
     setStatus("");
     const d = decide(p);
-    if ((d as any).type === "ask") {
+    if (d.type === "ask") {
       setPlan(null);
       setIntent(null);
-      push("agent", (d as any).question);
-      setStatus((d as any).question);
+      push("agent", d.question);
+      setStatus(d.question);
       return;
     }
-    setPlan((d as any).plan);
-    setIntent((d as any).intent);
-    push(
-      "agent",
-      ["Plan:", ...((d as any).plan as string[]).map((s, i) => `${i + 1}. ${s}`)].join(
-        "\n"
-      )
-    );
+    setPlan(d.plan);
+    setIntent(d.intent);
+    push("agent", ["Plan:", ...d.plan.map((s: string, i: number) => `${i + 1}. ${s}`)].join("\n"));
   }
 
   async function onConfirm() {
@@ -201,15 +192,12 @@ export default function PromptAgent() {
         const tx = await swapViaAggregator(q.universalRoutes);
 
         setStatus("Done");
-        push(
-          "agent",
-          `Swap success ✅
+        push("agent", `Swap success ✅
 From: ${intent.tokenIn}
 To: ${intent.tokenOut}
 Amount: ${intent.amount}
 Tx: ${tx.hash}
-↗ View: ${explorerBase}/tx/${tx.hash}`
-        );
+↗ View: ${explorerBase}/tx/${tx.hash}`);
         setToast("Swap success ✅");
         clearPlan();
       } catch (e: any) {
@@ -229,37 +217,32 @@ Tx: ${tx.hash}
 
         await ensureAeneid();
 
-        // 1) Upload image → CID
+        // 1) Kompres jika besar, lalu upload
+        setStatus("Optimizing image…");
+        const fileToUpload = await compressImage(file); // <= penting
+
         setStatus("Upload image...");
         const fd = new FormData();
-        fd.append("file", file);
-        const upFile = await fetchJSON("/api/ipfs/file", {
-          method: "POST",
-          body: fd,
-        });
+        fd.append("file", fileToUpload, fileToUpload.name);
 
+        const upFile = await fetchJSON("/api/ipfs/file", { method: "POST", body: fd });
         const imageCid = extractCid(upFile.cid || upFile.url);
         const imageGateway = toHttps(imageCid);
-        const fileSha256 = await sha256HexOfFile(file);
+        const fileSha256 = await sha256HexOfFile(fileToUpload);
 
-        // 2) IP metadata (public)
+        // 2) IP metadata
         const ipMeta = {
-          title: intent.title || file.name,
+          title: intent.title || fileToUpload.name,
           description: intent.prompt || "",
           image: imageGateway,
           imageHash: fileSha256,
           mediaUrl: imageGateway,
           mediaHash: fileSha256,
-          mediaType: file.type || "image/png",
-          creators: address
-            ? [{ name: address, address, contributionPercent: 100 }]
-            : [],
-          aiMetadata: intent.prompt
-            ? { prompt: intent.prompt, generator: "user", model: "rule-based" }
-            : undefined,
+          mediaType: fileToUpload.type || "image/webp",
+          creators: address ? [{ name: address, address, contributionPercent: 100 }] : [],
+          aiMetadata: intent.prompt ? { prompt: intent.prompt, generator: "user", model: "rule-based" } : undefined,
         };
 
-        // 3) Upload IP metadata → URI + KECCAK(JSON)
         setStatus("Upload IP metadata...");
         const upMeta = await fetchJSON("/api/ipfs/json", {
           method: "POST",
@@ -268,9 +251,9 @@ Tx: ${tx.hash}
         });
         const ipMetaCid = extractCid(upMeta.cid || upMeta.url);
         const ipMetadataURI = toIpfsUri(ipMetaCid);
-        const ipMetadataHash = await keccakOfJson(ipMeta);
+        const ipMetadataHash = await keccakOfJson(ipMeta); // keccak256(JSON bytes)
 
-        // 4) NFT metadata (include pointer to ipfs:// IP metadata) + hash
+        // 3) NFT metadata (pointer ipfs:// ke IP meta)
         const nftMeta = {
           name: `IP Ownership — ${ipMeta.title}`,
           description: "Ownership NFT for IP Asset",
@@ -289,13 +272,13 @@ Tx: ${tx.hash}
         const nftMetadataURI = toIpfsUri(nftMetaCid);
         const nftMetadataHash = await keccakOfJson(nftMeta);
 
-        // 5) Register on Story
+        // 4) Register on Story
         setStatus("Register on Story...");
         const client = await getClient();
         const res = await client.ipAsset.mintAndRegisterIp({
-          spgNftContract: (process.env
-            .NEXT_PUBLIC_SPG_COLLECTION ||
-            "0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc") as `0x${string}`,
+          spgNftContract:
+            (process.env.NEXT_PUBLIC_SPG_COLLECTION ||
+              "0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc") as `0x${string}`,
           recipient: address as `0x${string}`,
           ipMetadata: {
             ipMetadataURI,
@@ -320,15 +303,7 @@ NFT Metadata: ${toHttps(nftMetaCid)}
         setToast("IP registered ✅");
         clearPlan();
       } catch (e: any) {
-        const msg = String(e?.message || e);
-        if (/PINATA_JWT|PINATA_GATEWAY|401|403|Authenticat/i.test(msg)) {
-          push(
-            "agent",
-            `Register error: Upload failed. Check server env PINATA_JWT (with "Bearer " prefix) and PINATA_GATEWAY. Details: ${msg}`
-          );
-        } else {
-          push("agent", `Register error: ${msg}`);
-        }
+        push("agent", `Register error: ${e?.message || String(e)}`);
         setToast("Register error ❌");
       }
     }
@@ -336,7 +311,7 @@ NFT Metadata: ${toHttps(nftMetaCid)}
 
   const canSend = isConnected && prompt.trim().length > 0;
 
-  /* ---------- UI ---------- */
+  // UI
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-6">
       {/* HISTORY LEFT */}
@@ -359,30 +334,19 @@ NFT Metadata: ${toHttps(nftMetaCid)}
           {messages.length === 0 ? (
             <div className="text-xs text-white/50">
               AI replies will appear here. Try:{" "}
-              <span className="badge">Swap 1 WIP &gt; USDC slippage 0.5%</span>{" "}
-              or{" "}
-              <span className="badge">
-                Register this image IP, title "Sunset" by-nc
-              </span>
-              .
+              <span className="badge">Swap 1 WIP &gt; USDC slippage 0.5%</span> or{" "}
+              <span className="badge">Register this image IP, title "Sunset" by-nc</span>.
             </div>
           ) : (
             <div className="space-y-3">
               {messages.map((m: Msg, i: number) => (
-                <div
-                  key={i}
-                  className={`flex ${m.role === "you" ? "justify-end" : "justify-start"}`}
-                >
+                <div key={i} className={`flex ${m.role === "you" ? "justify-end" : "justify-start"}`}>
                   <div
                     className={`max-w-[75%] rounded-2xl px-4 py-3 border ${
-                      m.role === "you"
-                        ? "bg-sky-500/15 border-sky-400/30"
-                        : "bg-white/6 border-white/10"
+                      m.role === "you" ? "bg-sky-500/15 border-sky-400/30" : "bg-white/6 border-white/10"
                     }`}
                   >
-                    <pre className="whitespace-pre-wrap text-sm break-words">
-                      {m.text}
-                    </pre>
+                    <pre className="whitespace-pre-wrap text-sm break-words">{m.text}</pre>
                   </div>
                 </div>
               ))}
@@ -393,6 +357,7 @@ NFT Metadata: ${toHttps(nftMetaCid)}
         {/* PROMPT BAR + MASCOT */}
         <div className="card relative overflow-visible space-y-3">
           <div className="flex items-end gap-2">
+            {/* ATTACH */}
             <button
               aria-label="Attach image"
               title="Attach Image (for Register IP)"
@@ -409,6 +374,7 @@ NFT Metadata: ${toHttps(nftMetaCid)}
               onChange={(e) => onPickFile(e.target.files?.[0] || undefined)}
             />
 
+            {/* TEXTAREA */}
             <textarea
               ref={taRef}
               rows={1}
@@ -422,22 +388,18 @@ NFT Metadata: ${toHttps(nftMetaCid)}
               onKeyDown={(e) => e.key === "Enter" && (e.ctrlKey || e.metaKey) && onRun()}
             />
 
+            {/* SEND */}
             <button
               className="p-2 rounded-xl bg-sky-500/90 hover:bg-sky-400 text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
               onClick={onRun}
               disabled={!canSend}
-              title={
-                !isConnected
-                  ? "Connect wallet to send"
-                  : !prompt.trim()
-                  ? "Type a prompt"
-                  : "Send (Ctrl/⌘+Enter)"
-              }
+              title={!isConnected ? "Connect wallet to send" : !prompt.trim() ? "Type a prompt" : "Send (Ctrl/⌘+Enter)"}
             >
               <Send className="h-5 w-5" />
             </button>
           </div>
 
+          {/* Preview & status */}
           <div className="flex items-center gap-3">
             {previewUrl && (
               <div className="flex items-center gap-2">
@@ -455,6 +417,7 @@ NFT Metadata: ${toHttps(nftMetaCid)}
             {status && <span className="text-xs text-white/60">{status}</span>}
           </div>
 
+          {/* Mascot */}
           <Image
             src="/brand/superlee-sprite.png"
             alt=""
@@ -471,6 +434,7 @@ NFT Metadata: ${toHttps(nftMetaCid)}
           />
         </div>
 
+        {/* Plan & actions */}
         {plan && (
           <div className="card space-y-3">
             <div className="text-sm text-white/70">Plan</div>
@@ -486,10 +450,7 @@ NFT Metadata: ${toHttps(nftMetaCid)}
               >
                 <Check className="h-4 w-4" /> Confirm
               </button>
-              <button
-                className="rounded-2xl border border-white/10 px-4 py-2 inline-flex items-center gap-2"
-                onClick={clearPlan}
-              >
+              <button className="rounded-2xl border border-white/10 px-4 py-2 inline-flex items-center gap-2" onClick={clearPlan}>
                 <X className="h-4 w-4" /> Cancel
               </button>
             </div>
