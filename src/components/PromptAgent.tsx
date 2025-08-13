@@ -322,27 +322,42 @@ NFT Metadata: ${toHttps(nftMetaCid)}
       {/* CHAT + PROMPT RIGHT */}
       <section className="space-y-4">
         <div ref={chatRef} className="card h-[360px] overflow-auto scrollbar-invisible">
-          {messages.length === 0 ? (
-            <div className="text-xs text-white/50">
-              AI replies will appear here. Try:{" "}
-              <span className="badge">Swap 1 WIP &gt; USDC slippage 0.5%</span> or{" "}
-              <span className="badge">Register this image IP, title "Sunset" by-nc</span>.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {messages.map((m: Msg, i: number) => (
-                <div key={i} className={`flex ${m.role === "you" ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[75%] rounded-2xl px-4 py-3 border ${
-                      m.role === "you" ? "bg-sky-500/15 border-sky-400/30" : "bg-white/6 border-white/10"
-                    }`}
-                  >
-                    <pre className="whitespace-pre-wrap text-sm break-words">{m.text}</pre>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          {messages.map((m: Msg, i: number) => {
+  const isYou = m.role === "you";
+  const isError =
+    /^(\w+\s)?error/i.test(m.text) ||
+    m.text.toLowerCase().startsWith("register error") ||
+    m.text.toLowerCase().startsWith("swap error");
+
+  return (
+    <div key={i} className={`flex ${isYou ? "justify-end" : "justify-start"}`}>
+      <div
+        className={[
+          // lebar bubble dikunci agar tidak “mendorong” panel
+          "max-w-[min(720px,75%)] rounded-2xl px-4 py-3 border shadow-sm",
+          isYou
+            ? "bg-sky-500/15 border-sky-400/30"
+            : "bg-white/5 border-white/10",
+          isError && "bg-red-500/10 border-red-400/30"
+        ].filter(Boolean).join(" ")}
+      >
+        {/* isi pesan */}
+        <pre
+          className={[
+            "msg-pre text-sm leading-relaxed",
+            // cegah bubble melar: batasi tinggi & scroll Y jika kepanjangan
+            "max-h-64 sm:max-h-80 overflow-y-auto",
+            // dan kalau masih ada baris super panjang, scroll X saja
+            "overflow-x-auto"
+          ].join(" ")}
+        >
+{m.text}
+        </pre>
+      </div>
+    </div>
+  );
+})}
+
         </div>
 
         {/* PROMPT BAR + MASCOT */}

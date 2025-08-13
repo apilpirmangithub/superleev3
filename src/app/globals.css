@@ -77,3 +77,10 @@ html, body {
     radial-gradient(60% 50% at 70% 35%, rgba(11,15,26,0) 0%, rgba(11,15,26,.25) 70%, rgba(11,15,26,.5) 100%),
     linear-gradient(180deg, rgba(11,15,26,.35) 0%, rgba(11,15,26,.15) 35%, rgba(11,15,26,.45) 100%);
 }
+
+/* --- Chat bubble content: wrap agresif utk hash/addr panjang --- */
+.msg-pre {
+  white-space: pre-wrap;          /* hormati newline */
+  overflow-wrap: anywhere;        /* paksa pecah di mana saja */
+  word-break: break-word;         /* fallback */
+}
