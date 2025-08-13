@@ -10,7 +10,7 @@ import { storyAeneid } from "@/lib/chains/story";
 import { Paperclip, Check, X, Send } from "lucide-react";
 import { parseUnits, toHex, keccak256 } from "viem";
 
-/* ---------- utils: hash ---------- */
+/* ---------- utils (hash, ipfs, fetch) ---------- */
 function bytesKeccak(data: Uint8Array): `0x${string}` { return keccak256(toHex(data)) as `0x${string}`; }
 async function keccakOfJson(obj: any): Promise<`0x${string}`> { return bytesKeccak(new TextEncoder().encode(JSON.stringify(obj))); }
 async function sha256HexOfFile(file: File): Promise<`0x${string}`> {
@@ -18,43 +18,29 @@ async function sha256HexOfFile(file: File): Promise<`0x${string}`> {
   const hash = await crypto.subtle.digest("SHA-256", buf);
   return toHex(new Uint8Array(hash), { size: 32 });
 }
-
-/* ---------- utils: IPFS URL helpers ---------- */
 function extractCid(u?: string): string {
   if (!u) return "";
   if (u.startsWith("ipfs://")) return u.slice(7);
   const m = u.match(/\/ipfs\/([^/?#]+)/i);
-  if (m?.[1]) return m[1];
-  return u;
+  return m?.[1] || u;
 }
-function toHttps(cidOrUrl?: string) { if (!cidOrUrl) return ""; return `https://ipfs.io/ipfs/${extractCid(cidOrUrl)}`; }
-function toIpfsUri(cidOrUrl?: string) { if (!cidOrUrl) return "" as const; return `ipfs://${extractCid(cidOrUrl)}` as const; }
-
-/* ---------- utils: fetch JSON (error-friendly) ---------- */
+function toHttps(cidOrUrl?: string) { const cid = extractCid(cidOrUrl); return cid ? `https://ipfs.io/ipfs/${cid}` : ""; }
+function toIpfsUri(cidOrUrl?: string) { const cid = extractCid(cidOrUrl); return (`ipfs://${cid}`) as const; }
 async function fetchJSON(input: RequestInfo | URL, init?: RequestInit) {
   const r = await fetch(input, init);
-  const text = await r.text();
-  if (!r.ok) throw new Error(`HTTP ${r.status}${r.statusText ? " " + r.statusText : ""}: ${text?.slice(0, 200)}`);
-  try { return JSON.parse(text); } catch { throw new Error(`Server returned non-JSON: ${text?.slice(0, 200)}`); }
+  const t = await r.text();
+  if (!r.ok) throw new Error(`HTTP ${r.status}${r.statusText ? " " + r.statusText : ""}: ${t.slice(0, 200)}`);
+  try { return JSON.parse(t); } catch { throw new Error(`Server returned non-JSON: ${t.slice(0, 200)}`); }
 }
-
-/* ---------- utils: image compress before upload ---------- */
-async function compressImage(
-  file: File,
-  opts: { maxDim?: number; quality?: number; targetMaxBytes?: number } = {}
-): Promise<File> {
-  const { maxDim = 1600, quality = 0.85, targetMaxBytes = 3.5 * 1024 * 1024 } = opts;
+async function compressImage(file: File, o: { maxDim?: number; quality?: number; targetMaxBytes?: number } = {}) {
+  const { maxDim = 1600, quality = 0.85, targetMaxBytes = 3.5 * 1024 * 1024 } = o;
   if (file.size <= targetMaxBytes) return file;
   const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bmp.width * scale);
-  canvas.height = Math.round(bmp.height * scale);
-  const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-  const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b as Blob), "image/webp", quality));
-  const name = (file.name.replace(/\.\w+$/, "") || "image") + ".webp";
-  return new File([blob], name, { type: "image/webp" });
+  const s = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas"); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+  const ctx = c.getContext("2d")!; ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  const blob: Blob = await new Promise(res => c.toBlob(b => res(b as Blob), "image/webp", quality));
+  return new File([blob], (file.name.replace(/\.\w+$/, "") || "image") + ".webp", { type: "image/webp" });
 }
 
 type Msg = { role: "you" | "agent"; text: string; ts: number };
@@ -62,29 +48,25 @@ type Msg = { role: "you" | "agent"; text: string; ts: number };
 export default function PromptAgent() {
   const { isConnected, address } = useAccount();
   const { getClient } = useStoryClient();
-
   const chainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
 
-  /** ------- UI state ------- */
   const [prompt, setPrompt] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
-  /** ------- Chat state ------- */
   const [messages, setMessages] = useState<Msg[]>([]);
   const [plan, setPlan] = useState<string[] | null>(null);
   const [intent, setIntent] = useState<any>(null);
   const [status, setStatus] = useState<string>("");
   const [toast, setToast] = useState<string | null>(null);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
   const explorerBase = storyAeneid.blockExplorers?.default.url || "https://aeneid.storyscan.xyz";
-  const canSend = isConnected && prompt.trim().length > 0;
 
-  /** ------- helpers ------- */
+  /* helpers */
   function push(role: Msg["role"], text: string) { setMessages((m) => [...m, { role, text, ts: Date.now() }]); }
   function clearPlan() { setPlan(null); setIntent(null); setStatus(""); }
   function onPickFile(f?: File) {
@@ -97,25 +79,23 @@ export default function PromptAgent() {
   function handleAutoGrow(el: HTMLTextAreaElement) { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }
   async function ensureAeneid() { if (chainId !== 1315) { try { await switchChainAsync({ chainId: 1315 }); } catch {} } }
 
-  /** ------- effects ------- */
+  /* effects */
   useEffect(() => { if (taRef.current) handleAutoGrow(taRef.current); }, [prompt]);
-  useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [messages, plan]);
+  useEffect(() => { chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: "smooth" }); }, [messages]);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 3500); return () => clearTimeout(t); }, [toast]);
   useEffect(() => { try { const s = localStorage.getItem("agentMessages"); if (s) setMessages(JSON.parse(s)); } catch {} }, []);
   useEffect(() => { try { localStorage.setItem("agentMessages", JSON.stringify(messages)); } catch {} }, [messages]);
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
-  /** ------- actions (logic TIDAK diubah) ------- */
+  /* actions */
   function onRun() {
     const p = prompt.trim();
     if (!p) return;
-    push("you", p);
-    setStatus("");
+    push("you", p); setStatus("");
     const d = decide(p);
     if (d.type === "ask") { setPlan(null); setIntent(null); push("agent", d.question); setStatus(d.question); return; }
     setPlan(d.plan); setIntent(d.intent);
     push("agent", ["Plan:", ...d.plan.map((s: string, i: number) => `${i + 1}. ${s}`)].join("\n"));
-    setPrompt(""); // feel ChatGPT
   }
 
   async function onConfirm() {
@@ -128,7 +108,7 @@ export default function PromptAgent() {
         const amountRaw = parseUnits(String(intent.amount), dec);
         const q = await getQuote({ tokenIn: intent.tokenIn, tokenOut: intent.tokenOut, amountInRaw: amountRaw.toString(), slippagePct: intent.slippagePct });
         setStatus("Approving..."); await approveForAggregator(intent.tokenIn as `0x${string}`, amountRaw);
-        setStatus("Swapping..."); const tx = await swapViaAggregator(q.universalRoutes);
+        setStatus("Swapping...");  const tx = await swapViaAggregator(q.universalRoutes);
         setStatus("Done");
         push("agent", `Swap success ✅
 From: ${intent.tokenIn}
@@ -150,8 +130,7 @@ Tx: ${tx.hash}
         const fileToUpload = await compressImage(file);
 
         setStatus("Upload image...");
-        const fd = new FormData();
-        fd.append("file", fileToUpload, fileToUpload.name);
+        const fd = new FormData(); fd.append("file", fileToUpload, fileToUpload.name);
         const upFile = await fetchJSON("/api/ipfs/file", { method: "POST", body: fd });
         const imageCid = extractCid(upFile.cid || upFile.url);
         const imageGateway = toHttps(imageCid);
@@ -170,7 +149,9 @@ Tx: ${tx.hash}
         };
 
         setStatus("Upload IP metadata...");
-        const upMeta = await fetchJSON("/api/ipfs/json", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(ipMeta) });
+        const upMeta = await fetchJSON("/api/ipfs/json", {
+          method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(ipMeta),
+        });
         const ipMetaCid = extractCid(upMeta.cid || upMeta.url);
         const ipMetadataURI = toIpfsUri(ipMetaCid);
         const ipMetadataHash = await keccakOfJson(ipMeta);
@@ -184,7 +165,9 @@ Tx: ${tx.hash}
         };
 
         setStatus("Upload NFT metadata...");
-        const upNft = await fetchJSON("/api/ipfs/json", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(nftMeta) });
+        const upNft = await fetchJSON("/api/ipfs/json", {
+          method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(nftMeta),
+        });
         const nftMetaCid = extractCid(upNft.cid || upNft.url);
         const nftMetadataURI = toIpfsUri(nftMetaCid);
         const nftMetadataHash = await keccakOfJson(nftMeta);
@@ -211,165 +194,144 @@ NFT Metadata: ${toHttps(nftMetaCid)}
     }
   }
 
-  /** ------- UI ------- */
-  return (
-    <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-[260px,1fr] gap-6">
-      {/* ==== Sidebar: History ==== */}
-      <aside className="card p-0 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-          <div className="text-sm font-medium">History</div>
-          <button
-            className="text-xs rounded-lg border border-white/15 px-2 py-1 hover:bg-white/10"
-            onClick={() => setMessages([])}
-            title="New chat"
-          >
-            New
-          </button>
-        </div>
+  const canSend = isConnected && prompt.trim().length > 0;
 
-        <div className="h-[65vh] overflow-y-auto scrollbar-invisible p-2">
-          {messages.filter((m) => m.role === "you").length === 0 ? (
-            <div className="text-xs opacity-70 px-2 py-3">
-              There are no interactions yet. Write the prompt on the right.
-            </div>
+  /* ---------- UI: Shell seperti ChatGPT ---------- */
+  return (
+    <div className="mx-auto max-w-[1200px] px-4 md:px-6 overflow-x-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-6">
+        {/* SIDEBAR (History) */}
+        <aside className="rounded-2xl border border-white/10 bg-white/5 p-4 h-[calc(100vh-180px)] overflow-y-auto scrollbar-invisible">
+          <div className="text-sm opacity-80 mb-3">History</div>
+          {messages.filter(m => m.role === "you").length === 0 ? (
+            <p className="text-xs opacity-60">There are no interactions yet. Write the prompt on the right.</p>
           ) : (
-            <ul className="space-y-1">
-              {messages
-                .filter((m) => m.role === "you")
-                .map((m, i) => (
-                  <li key={`${m.ts}-${i}`}>
-                    <button
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 text-sm truncate"
-                      title={m.text}
-                      onClick={() => setPrompt(m.text)}
-                    >
-                      {m.text}
-                    </button>
-                  </li>
-                ))}
+            <ul className="space-y-2 pr-1">
+              {messages.filter((m) => m.role === "you").map((m, i) => (
+                <li key={i} className="text-sm line-clamp-2">{m.text}</li>
+              ))}
             </ul>
           )}
-        </div>
-      </aside>
+        </aside>
 
-      {/* ==== Chat pane ==== */}
-      <section className="card p-0 relative overflow-hidden">
-        {/* Messages */}
-        <div ref={scrollRef} className="h-[65vh] overflow-y-auto px-4 pt-4 pb-2 scrollbar-invisible">
-          {messages.length === 0 ? (
-            <div className="text-xs text-white/60">
-              AI replies will appear here. Try:{" "}
-              <span className="badge">Swap 1 WIP &gt; USDC slippage 0.5%</span>{" "}
-              or{" "}
-              <span className="badge">Register this image IP, title "Sunset" by-nc</span>.
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {messages.map((m, i) => {
-                const isYou = m.role === "you";
-                const isError =
-                  /^(\w+\s)?error/i.test(m.text) ||
-                  m.text.toLowerCase().startsWith("register error") ||
-                  m.text.toLowerCase().startsWith("swap error");
-                return (
-                  <div key={i} className={`flex ${isYou ? "justify-end" : "justify-start"}`}>
-                    <div
-                      className={[
-                        "max-w-[min(720px,85%)] rounded-2xl px-4 py-3 border shadow-sm",
-                        isYou ? "bg-sky-500/15 border-sky-400/30" : "bg-white/5 border-white/10",
-                        isError && "bg-red-500/10 border-red-400/30",
-                      ].join(" ")}
-                    >
-                      <pre className="msg-pre text-sm leading-relaxed max-h-80 overflow-y-auto">
-{m.text}
-                      </pre>
+        {/* MAIN CHAT AREA */}
+        <section className="rounded-2xl border border-white/10 bg-white/5 h-[calc(100vh-180px)] overflow-hidden flex flex-col">
+          {/* messages area */}
+          <div ref={chatScrollRef} className="flex-1 overflow-y-auto scrollbar-invisible">
+            <div className="mx-auto w-full max-w-[820px] px-3 py-4">
+              {messages.length === 0 ? (
+                <div className="text-xs opacity-60">
+                  AI replies will appear here. Try: <span className="badge">Swap 1 WIP &gt; USDC slippage 0.5%</span> or{" "}
+                  <span className="badge">Register this image IP, title "Sunset" by-nc</span>.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {messages.map((m, i) => (
+                    <div key={i} className={`flex ${m.role === "you" ? "justify-end" : "justify-start"}`}>
+                      <div
+                        className={`max-w-[75%] rounded-2xl px-4 py-3 border ${
+                          m.role === "you" ? "bg-sky-500/15 border-sky-400/30" : "bg-white/6 border-white/10"
+                        }`}
+                      >
+                        <pre className="whitespace-pre-wrap text-sm break-words">{m.text}</pre>
+                      </div>
                     </div>
+                  ))}
+                </div>
+              )}
+
+              {/* plan box */}
+              {plan && (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-sm opacity-70 mb-2">Plan</div>
+                  <ol className="list-decimal pl-5 space-y-1 text-sm">
+                    {plan.map((p: string, i: number) => <li key={i}>{p}</li>)}
+                  </ol>
+                  <div className="flex gap-2 mt-3">
+                    <button className="rounded-2xl bg-sky-500/90 hover:bg-sky-400 text-white px-4 py-2 inline-flex items-center gap-2" onClick={onConfirm}>
+                      <Check className="h-4 w-4" /> Confirm
+                    </button>
+                    <button className="rounded-2xl border border-white/10 px-4 py-2 inline-flex items-center gap-2" onClick={clearPlan}>
+                      <X className="h-4 w-4" /> Cancel
+                    </button>
                   </div>
-                );
-              })}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Plan (compact system card) */}
-        {plan && (
-          <div className="px-4 pb-2">
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <div className="text-sm font-medium mb-1 opacity-90">Plan</div>
-              <ol className="list-decimal pl-5 space-y-1 text-sm">
-                {plan.map((p, i) => <li key={i}>{p}</li>)}
-              </ol>
-              <div className="mt-3 flex gap-2">
-                <button className="rounded-xl bg-sky-500/90 hover:bg-sky-400 text-white px-4 py-2 inline-flex items-center gap-2" onClick={onConfirm}>
-                  <Check className="h-4 w-4" /> Confirm
+          {/* composer sticky at bottom */}
+          <div className="shrink-0 border-t border-white/10 bg-gradient-to-t from-black/20 to-transparent card relative overflow-visible">
+            <div className="mx-auto w-full max-w-[820px] px-3 py-3">
+              <div className="relative flex items-end gap-2 rounded-2xl ring-1 ring-white/15 bg-white/5/30 backdrop-blur-md px-3 py-2 overflow-visible">
+                {/* attach */}
+                <button
+                  aria-label="Attach image"
+                  title="Attach Image (for Register IP)"
+                  className="p-2 rounded-xl text-white/80 hover:text-white bg-transparent hover:bg-white/10 focus:bg-white/10 active:bg-white/20 transition"
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <Paperclip className="h-5 w-5" />
                 </button>
-                <button className="rounded-xl border border-white/10 px-4 py-2 inline-flex items-center gap-2" onClick={clearPlan}>
-                  <X className="h-4 w-4" /> Cancel
-                </button>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => onPickFile(e.target.files?.[0] || undefined)} />
+
+                {/* textarea transparent */}
+                <textarea
+                  ref={taRef}
+                  rows={1}
+                  className="flex-1 resize-none rounded-md bg-transparent px-2 py-2 text-base sm:text-lg placeholder:opacity-50 focus:outline-none scrollbar-invisible"
+                  placeholder='Swap 1 WIP > USDC slippage 0.5%  |  Register this image IP, title "Sunset" by-nc'
+                  value={prompt}
+                  onChange={(e) => { setPrompt(e.target.value); handleAutoGrow(e.currentTarget); }}
+                  onKeyDown={(e) => e.key === "Enter" && (e.ctrlKey || e.metaKey) && onRun()}
+                />
+
+                {/* send */}
+                <button
+    className="relative z-10 p-2 rounded-xl bg-sky-500/90 hover:bg-sky-400 text-white
+               disabled:opacity-50 disabled:cursor-not-allowed transition"
+    onClick={onRun}
+    disabled={!canSend}
+    title={!isConnected ? "Connect wallet to send" : !prompt.trim() ? "Type a prompt" : "Send (Ctrl/⌘+Enter)"}
+  >
+    <Send className="h-5 w-5" />
+  </button>
+
+  {/* Sprite nempel di sudut kanan-atas tombol (di DALAM wrapper) */}
+  <Image
+    src="/brand/superlee-sprite.png"
+    alt=""
+    width={48}
+    height={48}
+    priority
+    className="
+      pointer-events-none select-none pixelated animate-float
+      absolute -top-2 -right-2  /* di dalam tombol, tidak keluar container */
+      w-12 h-12
+      z-20 drop-shadow-[0_10px_28px_rgba(34,211,238,.35)]
+    "
+  />
+              </div>
+
+              {/* preview & status */}
+              <div className="mt-2 flex items-center gap-3">
+                {previewUrl && (
+                  <div className="flex items-center gap-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={previewUrl} alt="preview" className="h-8 w-8 rounded-md object-cover" />
+                    <button className="rounded-full border border-white/15 bg-white/5 px-2 py-1 text-xs" onClick={removeFile} title="Remove image">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+                {status && <span className="text-xs opacity-70">{status}</span>}
               </div>
             </div>
           </div>
-        )}
+        </section>
+      </div>
 
-        {/* Input bar (sticky) */}
-        <div className="sticky bottom-0 w-full border-t border-white/10 bg-[color:var(--ai-card)]/95 backdrop-blur px-3 py-3">
-          <div className="flex items-end gap-2">
-            <button
-              aria-label="Attach image"
-              title="Attach Image (for Register IP)"
-              className="p-2 rounded-xl text-white/70 hover:text-white bg-transparent hover:bg-white/10 focus:bg-white/10 active:bg-white/20 transition"
-              onClick={() => fileRef.current?.click()}
-            >
-              <Paperclip className="h-5 w-5" />
-            </button>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => onPickFile(e.target.files?.[0] || undefined)} />
-
-            <textarea
-              ref={taRef}
-              rows={1}
-              className="flex-1 resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base sm:text-lg placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-400/40 scrollbar-invisible"
-              placeholder='Swap 1 WIP > USDC slippage 0.5%  |  Register this image IP, title "Sunset" by-nc'
-              value={prompt}
-              onChange={(e) => { setPrompt(e.target.value); handleAutoGrow(e.currentTarget); }}
-              onKeyDown={(e) => e.key === "Enter" && (e.ctrlKey || e.metaKey) && onRun()}
-            />
-
-            <button
-              className="p-2 rounded-xl bg-sky-500/90 hover:bg-sky-400 text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
-              onClick={onRun}
-              disabled={!canSend}
-              title={!isConnected ? "Connect wallet to send" : !prompt.trim() ? "Type a prompt" : "Send (Ctrl/⌘+Enter)"}
-            >
-              <Send className="h-5 w-5" />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3 mt-2 text-xs">
-            {previewUrl && (
-              <div className="flex items-center gap-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={previewUrl} alt="preview" className="h-8 w-8 rounded-md object-cover" />
-                <button className="rounded-full border border-white/15 bg-white/5 px-2 py-1" onClick={removeFile} title="Remove image">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            )}
-            {status && <span className="text-white/60">{status}</span>}
-          </div>
-        </div>
-
-        {/* Mascot (kecil, badge-like) */}
-        <Image
-          src="/brand/superlee-sprite.png"
-          alt=""
-          width={280}
-          height={280}
-          priority
-          className="pointer-events-none select-none pixelated animate-float absolute -top-2 -right-2 z-10 w-[clamp(40px,8vmin,96px)] opacity-80 sm:opacity-90 drop-shadow-[0_10px_28px_rgba(34,211,238,.35)]"
-        />
-      </section>
-
-      {/* Toast */}
+      {/* toast */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 rounded-xl bg-black/70 border border-white/10 px-4 py-3 text-sm shadow-glow">
           {toast}

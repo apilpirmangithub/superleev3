@@ -1,27 +1,45 @@
+// src/app/providers.tsx
 "use client";
-import { ReactNode, useMemo, useState } from "react";
-import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
+
+import "@rainbow-me/rainbowkit/styles.css";
+import { RainbowKitProvider, darkTheme, lightTheme } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { wagmiConfig } from "@/lib/wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { RainbowKitProvider, lightTheme, darkTheme } from "@rainbow-me/rainbowkit";
-import "@rainbow-me/rainbowkit/styles.css";
+import { useEffect, useState } from "react";
 
-function RKTheme({ children }: { children: ReactNode }) {
-  const { resolvedTheme } = useTheme();
-  const rk = useMemo(() => (resolvedTheme === "dark" ? darkTheme() : lightTheme()), [resolvedTheme]);
-  return <RainbowKitProvider theme={rk}>{children}</RainbowKitProvider>;
+function RKTheme({ children }: { children: React.ReactNode }) {
+  const [isDark, setIsDark] = useState(true);
+  useEffect(() => {
+    const root = document.documentElement;
+    const dark = root.classList.contains("dark");
+    setIsDark(dark);
+    const obs = new MutationObserver(() =>
+      setIsDark(root.classList.contains("dark"))
+    );
+    obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <RainbowKitProvider
+      theme={isDark ? darkTheme() : lightTheme()}
+      modalSize="compact"
+      showRecentTransactions={false}
+    >
+      {children}
+    </RainbowKitProvider>
+  );
 }
 
-export default function Providers({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+const qc = new QueryClient();
+
+export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <NextThemesProvider attribute="class" defaultTheme="dark" enableSystem>
-      <WagmiProvider config={wagmiConfig}>
-        <QueryClientProvider client={queryClient}>
-          <RKTheme>{children}</RKTheme>
-        </QueryClientProvider>
-      </WagmiProvider>
-    </NextThemesProvider>
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={qc}>
+        <RKTheme>{children}</RKTheme>
+      </QueryClientProvider>
+    </WagmiProvider>
   );
 }

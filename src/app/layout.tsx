@@ -1,30 +1,38 @@
+// src/app/layout.tsx
 import "./globals.css";
+import type { Metadata } from "next";
 import { ReactNode } from "react";
 import Providers from "./providers";
 import Topbar from "@/components/Topbar";
-import ThemeColorMetaSync from "@/components/ThemeColorMetaSync";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Superlee AI Agent",
   description: "Swap via PiperX + Register IP on Story",
-  // Status bar / browser UI color — responsif ke system theme
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7fafc" }, // light bg
-    { media: "(prefers-color-scheme: dark)", color: "#0b0f1a" },  // dark bg
+    { media: "(prefers-color-scheme: light)", color: "#f7fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0f1a" },
   ],
-  // (opsional) Safari iOS
-  other: {
-    "apple-mobile-web-app-status-bar-style": "default",
-  },
+  other: { "color-scheme": "light dark" },
 };
+
+// Inline script untuk set class "dark" SEBELUM hydrate (anti kedip)
+function ThemeScript() {
+  return (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `(()=>{try{var t=localStorage.getItem("theme");
+var d=t?t==="dark":window.matchMedia("(prefers-color-scheme: dark)").matches;
+document.documentElement.classList.toggle("dark",d)}catch(e){}})();`,
+      }}
+    />
+  );
+}
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning>
-        {/* Sinkronkan <meta name="theme-color"> saat user toggle light/dark */}
-        <ThemeColorMetaSync light="#f7fafc" dark="#0b0f1a" />
-
+      <body className="min-h-dvh">
+        <ThemeScript />
         <Providers>
           <div className="relative min-h-dvh">
             {/* === FULL-SCREEN BACKGROUND === */}
@@ -43,8 +51,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               }}
             />
             <div className="hero-vignette" />
-
-            {/* overlay grid/efek lain (opsional) */}
             <div className="ai-grid absolute inset-0 pointer-events-none" />
 
             {/* === CONTENT === */}

@@ -1,24 +1,36 @@
 "use client";
-import { useTheme } from "next-themes";
-import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Moon, Sun } from "lucide-react";
 
 export default function ThemeToggle() {
-  const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const stored = localStorage.getItem("theme");
+    const prefers = typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const isDark = stored ? stored === "dark" : prefers;
+    document.documentElement.classList.toggle("dark", isDark);
+    setDark(isDark);
+  }, []);
+
+  function toggle() {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+  }
+
   if (!mounted) return null;
 
-  const isDark = resolvedTheme === "dark";
   return (
     <button
-      type="button"
-      aria-label="Toggle theme"
-      className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-2.5 py-2"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-      title={isDark ? "Switch to light" : "Switch to dark"}
+      onClick={toggle}
+      title="Toggle theme"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/5 hover:bg-white/10"
     >
-      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
     </button>
   );
 }
