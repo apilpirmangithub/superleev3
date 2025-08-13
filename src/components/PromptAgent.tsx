@@ -8,16 +8,9 @@ import { getDecimals, getQuote, approveForAggregator, swapViaAggregator } from "
 import { useStoryClient } from "@/lib/storyClient";
 import { storyAeneid } from "@/lib/chains/story";
 import { Paperclip, Check, X, Send } from "lucide-react";
-import { parseUnits, toHex, keccak256 } from "viem";
+import { parseUnits, toHex } from "viem";
 
 /* ---------- utils: hash ---------- */
-function bytesKeccak(data: Uint8Array): `0x${string}` {
-  return keccak256(toHex(data)) as `0x${string}`;
-}
-async function keccakOfJson(obj: any): Promise<`0x${string}`> {
-  const json = JSON.stringify(obj);
-  return bytesKeccak(new TextEncoder().encode(json));
-}
 async function sha256HexOfFile(file: File): Promise<`0x${string}`> {
   const buf = await file.arrayBuffer();
   const hash = await crypto.subtle.digest("SHA-256", buf);
@@ -48,8 +41,6 @@ async function fetchJSON(input: RequestInfo | URL, init?: RequestInit) {
   const r = await fetch(input, init);
   const text = await r.text();
   if (!r.ok) {
-    // Kasus umum di Vercel saat upload besar: 413 Request Entity Too Large
-    // Atau 401/403 Auth Pinata
     const head = text?.slice(0, 200);
     throw new Error(`HTTP ${r.status}${r.statusText ? " " + r.statusText : ""}: ${head}`);
   }
@@ -219,18 +210,18 @@ Tx: ${tx.hash}
 
         // 1) Kompres jika besar, lalu upload
         setStatus("Optimizing image…");
-        const fileToUpload = await compressImage(file); // <= penting
+        const fileToUpload = await compressImage(file);
 
         setStatus("Upload image...");
         const fd = new FormData();
         fd.append("file", fileToUpload, fileToUpload.name);
 
         const upFile = await fetchJSON("/api/ipfs/file", { method: "POST", body: fd });
-        const imageCid = extractCid(upFile.cid || upFile.url);
+        const imageCid = extractCid(upFile.cid || upFile.IpfsHash || upFile.url);
         const imageGateway = toHttps(imageCid);
         const fileSha256 = await sha256HexOfFile(fileToUpload);
 
-        // 2) IP metadata
+        // 2) IP metadata → upload via server (server menghitung keccak)
         const ipMeta = {
           title: intent.title || fileToUpload.name,
           description: intent.prompt || "",
@@ -249,11 +240,11 @@ Tx: ${tx.hash}
           headers: { "content-type": "application/json" },
           body: JSON.stringify(ipMeta),
         });
-        const ipMetaCid = extractCid(upMeta.cid || upMeta.url);
+        const ipMetaCid = extractCid(upMeta.cid || upMeta.IpfsHash || upMeta.url);
         const ipMetadataURI = toIpfsUri(ipMetaCid);
-        const ipMetadataHash = await keccakOfJson(ipMeta); // keccak256(JSON bytes)
+        const ipMetadataHash = upMeta.keccak as `0x${string}`; // ✅ pakai hash dari server
 
-        // 3) NFT metadata (pointer ipfs:// ke IP meta)
+        // 3) NFT metadata (pointer ipfs:// ke IP meta) → upload via server
         const nftMeta = {
           name: `IP Ownership — ${ipMeta.title}`,
           description: "Ownership NFT for IP Asset",
@@ -268,9 +259,9 @@ Tx: ${tx.hash}
           headers: { "content-type": "application/json" },
           body: JSON.stringify(nftMeta),
         });
-        const nftMetaCid = extractCid(upNft.cid || upNft.url);
+        const nftMetaCid = extractCid(upNft.cid || upNft.IpfsHash || upNft.url);
         const nftMetadataURI = toIpfsUri(nftMetaCid);
-        const nftMetadataHash = await keccakOfJson(nftMeta);
+        const nftMetadataHash = upNft.keccak as `0x${string}`; // ✅ pakai hash dari server
 
         // 4) Register on Story
         setStatus("Register on Story...");

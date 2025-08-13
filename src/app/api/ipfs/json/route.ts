@@ -1,33 +1,39 @@
-import { PinataSDK } from "pinata-web3";
+import { NextResponse } from "next/server";
+import { PinataSDK, type PinResponse } from "pinata-web3";
+import { keccak256, toHex } from "viem";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 export async function POST(req: Request) {
   try {
     const PINATA_JWT = process.env.PINATA_JWT;
-    const PINATA_GATEWAY = process.env.PINATA_GATEWAY || "ipfs.io";
+    const PINATA_GATEWAY = process.env.PINATA_GATEWAY;
     if (!PINATA_JWT) {
-      return new Response("Missing PINATA_JWT", { status: 500 });
+      return NextResponse.json({ error: "Missing PINATA_JWT" }, { status: 500 });
     }
 
-    let body: any;
-    try {
-      body = await req.json();
-    } catch {
-      return new Response("Invalid JSON", { status: 400 });
+    // Baca persis string yang dikirim client (jangan parse-json dulu)
+    const raw = await req.text();
+    if (!raw) {
+      return NextResponse.json({ error: "Empty body" }, { status: 400 });
     }
 
-    const pinata = new PinataSDK({
-      pinataJwt: PINATA_JWT,
-      pinataGateway: PINATA_GATEWAY,
-    });
+    // Keccak256 atas bytes yang PERSIS akan di-upload
+    const bytes = new TextEncoder().encode(raw);
+    const keccak = keccak256(toHex(bytes));
 
-    const up = await pinata.upload.json(body);
-    const cid = up.IpfsHash;
-    const url = `https://${PINATA_GATEWAY}/ipfs/${cid}`;
+    const pinata = new PinataSDK({ pinataJwt: PINATA_JWT, pinataGateway: PINATA_GATEWAY });
 
-    return Response.json({ cid, url });
+    // Upload EXACT bytes sebagai file JSON
+    const file = new File([raw], "metadata.json", { type: "application/json" });
+    const up: PinResponse = await pinata.upload.file(file);
+
+    const cid = up.IpfsHash; // Pinata format
+    const url =
+      (PINATA_GATEWAY ? `${PINATA_GATEWAY}` : "https://ipfs.io") + `/ipfs/${cid}`;
+
+    return NextResponse.json({ cid, url, keccak, raw: up }, { status: 200 });
   } catch (e: any) {
-    return new Response(String(e?.message || e), { status: 500 });
+    return NextResponse.json({ error: e?.message ?? String(e) }, { status: 500 });
   }
 }
