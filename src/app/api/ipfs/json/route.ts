@@ -1,41 +1,33 @@
-// src/app/api/ipfs/json/route.ts
 import { PinataSDK } from "pinata-web3";
 
 export const runtime = "nodejs";
 
-const pinata = new PinataSDK({
-  pinataJwt: process.env.PINATA_JWT!,
-  pinataGateway: process.env.PINATA_GATEWAY!,
-});
-
-function buildGatewayUrl(cid: string) {
-  const gw = process.env.PINATA_GATEWAY!;
-  const host = gw.startsWith("http") ? gw.replace(/\/+$/, "") : `https://${gw}`;
-  return `${host}/ipfs/${cid}`;
-}
-
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const PINATA_JWT = process.env.PINATA_JWT;
+    const PINATA_GATEWAY = process.env.PINATA_GATEWAY || "ipfs.io";
+    if (!PINATA_JWT) {
+      return new Response("Missing PINATA_JWT", { status: 500 });
+    }
 
-    // Upload JSON sebagai File (pinata-web3 tidak punya upload.json)
-    const blob = new Blob([JSON.stringify(body)], { type: "application/json" });
-    const file = new File([blob], "metadata.json", { type: "application/json" });
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response("Invalid JSON", { status: 400 });
+    }
 
-    const up = await pinata.upload.file(file);
-    const cid = up.IpfsHash;
-    const url = buildGatewayUrl(cid);
-
-    return Response.json({
-      cid,
-      url,
-      // alias kompatibilitas
-      hash: cid,
-      IpfsHash: cid,
-      PinSize: up.PinSize,
-      Timestamp: up.Timestamp,
+    const pinata = new PinataSDK({
+      pinataJwt: PINATA_JWT,
+      pinataGateway: PINATA_GATEWAY,
     });
+
+    const up = await pinata.upload.json(body);
+    const cid = up.IpfsHash;
+    const url = `https://${PINATA_GATEWAY}/ipfs/${cid}`;
+
+    return Response.json({ cid, url });
   } catch (e: any) {
-    return new Response(e?.message || "Upload JSON error", { status: 500 });
+    return new Response(String(e?.message || e), { status: 500 });
   }
 }

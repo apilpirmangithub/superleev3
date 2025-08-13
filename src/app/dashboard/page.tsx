@@ -289,7 +289,7 @@ export default function DashboardPage() {
       </div>
 
       {!isConnected && (
-        <div className="card">Connect wallet untuk melihat IP terdaftar.</div>
+        <div className="card">Connect wallet to see registered IP.</div>
       )}
       {!SPG && (
         <div className="card">
@@ -298,11 +298,11 @@ export default function DashboardPage() {
       )}
       {isConnected && SPG && chainId !== AENEID_ID && (
         <div className="card">
-          Kamu saat ini bukan di Aeneid. Klik{" "}
+          You are not currently in the Aeneid. Click{" "}
           <button onClick={ensureAeneid} className="underline hover:opacity-80">
             Switch to Aeneid
           </button>{" "}
-          lalu refresh.
+          then refresh.
         </div>
       )}
 
@@ -312,8 +312,7 @@ export default function DashboardPage() {
         <div className="card">
           There are no registered IPs yet.
           <div className="mt-2 text-xs opacity-70">
-            Tip: set <code>NEXT_PUBLIC_SPG_START_BLOCK</code> untuk mempercepat
-            full scan.
+            Tip: set <code>NEXT_PUBLIC_SPG_START_BLOCK</code> to speed up the full scan.
           </div>
         </div>
       )}

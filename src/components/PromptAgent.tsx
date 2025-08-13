@@ -34,7 +34,7 @@ function extractCid(u?: string): string {
   if (u.startsWith("ipfs://")) return u.slice(7);
   const m = u.match(/\/ipfs\/([^/?#]+)/i);
   if (m?.[1]) return m[1];
-  return u; // sudah CID
+  return u; // assume CID already
 }
 function toHttps(cidOrUrl?: string) {
   if (!cidOrUrl) return "";
@@ -45,6 +45,20 @@ function toIpfsUri(cidOrUrl?: string) {
   if (!cidOrUrl) return "" as const;
   const cid = extractCid(cidOrUrl);
   return `ipfs://${cid}` as const;
+}
+
+/** Safe JSON fetcher that never throws "Unexpected token" on HTML/text errors */
+async function fetchJSON(input: RequestInfo | URL, init?: RequestInit) {
+  const r = await fetch(input, init);
+  const text = await r.text();
+  if (!r.ok) {
+    throw new Error(`HTTP ${r.status}: ${text?.slice(0, 200)}`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Server returned non-JSON: ${text?.slice(0, 200)}`);
+  }
 }
 
 type Msg = { role: "you" | "agent"; text: string; ts: number };
@@ -102,7 +116,7 @@ export default function PromptAgent() {
       try {
         await switchChainAsync({ chainId: 1315 });
       } catch {
-        /* user mungkin cancel; lanjut tapi tx akan gagal */
+        /* user can cancel; tx may fail then */
       }
     }
   }
@@ -147,18 +161,18 @@ export default function PromptAgent() {
     push("you", p);
     setStatus("");
     const d = decide(p);
-    if (d.type === "ask") {
+    if ((d as any).type === "ask") {
       setPlan(null);
       setIntent(null);
-      push("agent", d.question);
-      setStatus(d.question);
+      push("agent", (d as any).question);
+      setStatus((d as any).question);
       return;
     }
-    setPlan(d.plan);
-    setIntent(d.intent);
+    setPlan((d as any).plan);
+    setIntent((d as any).intent);
     push(
       "agent",
-      ["Plan:", ...d.plan.map((s: string, i: number) => `${i + 1}. ${s}`)].join(
+      ["Plan:", ...((d as any).plan as string[]).map((s, i) => `${i + 1}. ${s}`)].join(
         "\n"
       )
     );
@@ -215,24 +229,24 @@ Tx: ${tx.hash}
 
         await ensureAeneid();
 
-        // 1) Upload image → ambil CID
+        // 1) Upload image → CID
         setStatus("Upload image...");
         const fd = new FormData();
         fd.append("file", file);
-        const upFile = await fetch("/api/ipfs/file", {
+        const upFile = await fetchJSON("/api/ipfs/file", {
           method: "POST",
           body: fd,
-        }).then((r) => r.json());
+        });
 
         const imageCid = extractCid(upFile.cid || upFile.url);
         const imageGateway = toHttps(imageCid);
-        const fileSha256 = await sha256HexOfFile(file); // opsional, tetap simpan di metadata
+        const fileSha256 = await sha256HexOfFile(file);
 
-        // 2) Susun IP metadata (untuk JSON publik / NFT)
+        // 2) IP metadata (public)
         const ipMeta = {
           title: intent.title || file.name,
           description: intent.prompt || "",
-          image: imageGateway,           // untuk tampilan
+          image: imageGateway,
           imageHash: fileSha256,
           mediaUrl: imageGateway,
           mediaHash: fileSha256,
@@ -245,37 +259,37 @@ Tx: ${tx.hash}
             : undefined,
         };
 
-        // 3) Upload IP metadata → CID + KECCAK(JSON) untuk kontrak
+        // 3) Upload IP metadata → URI + KECCAK(JSON)
         setStatus("Upload IP metadata...");
-        const upMeta = await fetch("/api/ipfs/json", {
+        const upMeta = await fetchJSON("/api/ipfs/json", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(ipMeta),
-        }).then((r) => r.json());
+        });
         const ipMetaCid = extractCid(upMeta.cid || upMeta.url);
         const ipMetadataURI = toIpfsUri(ipMetaCid);
-        const ipMetadataHash = await keccakOfJson(ipMeta); // ✅ keccak256(bytes(json))
+        const ipMetadataHash = await keccakOfJson(ipMeta);
 
-        // 4) Susun & upload NFT metadata (masukkan pointer ipfs:// ke IP meta)
+        // 4) NFT metadata (include pointer to ipfs:// IP metadata) + hash
         const nftMeta = {
           name: `IP Ownership — ${ipMeta.title}`,
           description: "Ownership NFT for IP Asset",
           image: imageGateway,
-          ipMetadataURI: ipMetadataURI, // simpan ipfs:// di metadata
+          ipMetadataURI,
           attributes: [{ trait_type: "ip_metadata_uri", value: ipMetadataURI }],
         };
 
         setStatus("Upload NFT metadata...");
-        const upNft = await fetch("/api/ipfs/json", {
+        const upNft = await fetchJSON("/api/ipfs/json", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(nftMeta),
-        }).then((r) => r.json());
+        });
         const nftMetaCid = extractCid(upNft.cid || upNft.url);
         const nftMetadataURI = toIpfsUri(nftMetaCid);
-        const nftMetadataHash = await keccakOfJson(nftMeta); // ✅ keccak256(bytes(json))
+        const nftMetadataHash = await keccakOfJson(nftMeta);
 
-        // 5) Register on Story – semua URI ipfs://, hash keccak256
+        // 5) Register on Story
         setStatus("Register on Story...");
         const client = await getClient();
         const res = await client.ipAsset.mintAndRegisterIp({
@@ -306,7 +320,15 @@ NFT Metadata: ${toHttps(nftMetaCid)}
         setToast("IP registered ✅");
         clearPlan();
       } catch (e: any) {
-        push("agent", `Register error: ${e?.message || String(e)}`);
+        const msg = String(e?.message || e);
+        if (/PINATA_JWT|PINATA_GATEWAY|401|403|Authenticat/i.test(msg)) {
+          push(
+            "agent",
+            `Register error: Upload failed. Check server env PINATA_JWT (with "Bearer " prefix) and PINATA_GATEWAY. Details: ${msg}`
+          );
+        } else {
+          push("agent", `Register error: ${msg}`);
+        }
         setToast("Register error ❌");
       }
     }
