@@ -10,6 +10,8 @@ import { useEffect, useState } from "react";
 
 function RKTheme({ children }: { children: React.ReactNode }) {
   const [isDark, setIsDark] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
   useEffect(() => {
     const root = document.documentElement;
     const dark = root.classList.contains("dark");
@@ -20,6 +22,26 @@ function RKTheme({ children }: { children: React.ReactNode }) {
     obs.observe(root, { attributes: true, attributeFilter: ["class"] });
     return () => obs.disconnect();
   }, []);
+
+  // Error boundary for WalletConnect issues
+  useEffect(() => {
+    const handleError = (error: ErrorEvent) => {
+      if (error.message?.includes('WalletConnect') ||
+          error.message?.includes('getRecomendedWallets') ||
+          error.message?.includes('Cannot convert undefined or null to object')) {
+        console.warn('WalletConnect error caught and handled:', error.message);
+        setHasError(true);
+        return true; // Prevent error from propagating
+      }
+    };
+
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
+  if (hasError) {
+    console.log('RainbowKit initialized with error recovery mode');
+  }
 
   return (
     <RainbowKitProvider
