@@ -10,8 +10,10 @@ import {
 import { storyAeneid } from "@/lib/chains/story";
 import { validateEnvironmentOrThrow } from "@/lib/utils/env-validation";
 
-// Validate environment variables early
-validateEnvironmentOrThrow();
+// Only validate environment on client side to avoid SSR issues
+if (typeof window !== 'undefined') {
+  validateEnvironmentOrThrow();
+}
 
 // WalletConnect Project ID (REQUIRED for production deployment)
 const projectId = (() => {
@@ -66,12 +68,17 @@ const connectors = connectorsForWallets(
   }
 );
 
-// Wagmi config
-export const wagmiConfig = createConfig({
-  chains: [storyAeneid],
-  connectors,
-  transports: {
-    [storyAeneid.id]: http(rpcUrl),
-  },
-  ssr: true,
-});
+// Create wagmi config function to call on client side only
+function createWagmiConfig() {
+  return createConfig({
+    chains: [storyAeneid],
+    connectors,
+    transports: {
+      [storyAeneid.id]: http(rpcUrl),
+    },
+    ssr: true,
+  });
+}
+
+// Export wagmi config - will be created client-side only
+export const wagmiConfig = typeof window !== 'undefined' ? createWagmiConfig() : null as any;
