@@ -15,7 +15,7 @@ const nextConfig = {
     ],
   },
 
-  webpack: (config) => {
+  webpack: (config, { dev }) => {
     // Reduce bundle size by excluding unnecessary polyfills
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -23,10 +23,41 @@ const nextConfig = {
       net: false,
       tls: false,
       encoding: false,
+      crypto: false,
+      stream: false,
+      assert: false,
+      http: false,
+      https: false,
+      os: false,
+      url: false,
     };
 
-    // Exclude problematic modules
-    config.externals.push('pino-pretty', 'lokijs', 'encoding');
+    // Exclude problematic modules that cause slow compilation
+    config.externals.push(
+      'pino-pretty',
+      'lokijs',
+      'encoding',
+      'bufferutil',
+      'utf-8-validate',
+      'supports-color'
+    );
+
+    // Speed up development builds
+    if (dev) {
+      config.optimization.splitChunks = {
+        chunks: 'all',
+        cacheGroups: {
+          default: false,
+          vendors: false,
+          vendor: {
+            chunks: 'all',
+            test: /node_modules/,
+            name: 'vendor',
+            enforce: true,
+          },
+        },
+      };
+    }
 
     return config;
   },
