@@ -1,6 +1,6 @@
 "use client";
-import PromptAgent from "@/components/PromptAgent";
+import { AgentOrchestrator } from "@/components/agent/AgentOrchestrator";
 
 export default function Page() {
-  return <PromptAgent />;
+  return <AgentOrchestrator />;
 }
