@@ -52,11 +52,19 @@ export function useChatAgent() {
     }
 
     // AI has a plan
-    setCurrentPlan({
-      type: decision.intent.kind as "swap" | "register",
-      steps: decision.plan,
-      intent: decision.intent,
-    });
+    if (decision.intent.kind === "swap") {
+      setCurrentPlan({
+        type: "swap",
+        steps: decision.plan,
+        intent: decision.intent,
+      });
+    } else if (decision.intent.kind === "register") {
+      setCurrentPlan({
+        type: "register",
+        steps: decision.plan,
+        intent: decision.intent,
+      });
+    }
 
     // Show plan to user
     const planText = [
