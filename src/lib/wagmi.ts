@@ -8,6 +8,10 @@ import {
   rabbyWallet,
 } from "@rainbow-me/rainbowkit/wallets";
 import { storyAeneid } from "@/lib/chains/story";
+import { validateEnvironmentOrThrow } from "@/lib/utils/env-validation";
+
+// Validate environment variables early
+validateEnvironmentOrThrow();
 
 // WalletConnect Project ID (REQUIRED for production deployment)
 const projectId = (() => {
