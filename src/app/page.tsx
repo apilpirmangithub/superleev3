@@ -1,56 +1,27 @@
-"use client";
-
-import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useAccount } from "wagmi";
-
 export default function HomePage() {
-  const { address, isConnected } = useAccount();
-
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <div className="text-center space-y-6">
-        <h1 className="text-4xl font-bold">
-          SuperLee AI Agent 🤖
-        </h1>
-        
-        <p className="text-lg text-muted-foreground">
-          AI-powered dApp for Story Chain - Token Swap & IP Registration
-        </p>
+    <div className="p-8 text-center">
+      <h1 className="text-4xl font-bold mb-4">
+        SuperLee AI Agent ✅
+      </h1>
+      
+      <p className="text-lg mb-6">
+        Development server berjalan dengan baik!
+      </p>
 
-        <div className="bg-card border rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Wallet Connection</h2>
-          <ConnectButton />
-          
-          {isConnected && (
-            <div className="mt-4 p-4 bg-green-100 dark:bg-green-900/20 rounded-lg">
-              <p className="text-green-800 dark:text-green-200">
-                ✅ Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
-              </p>
-            </div>
-          )}
-        </div>
+      <div className="bg-green-100 p-4 rounded-lg">
+        <p>Environment Variables Loaded:</p>
+        <ul className="text-sm mt-2">
+          <li>Chain ID: {process.env.NEXT_PUBLIC_STORY_CHAIN_ID || 'Not set'}</li>
+          <li>RPC: {process.env.NEXT_PUBLIC_STORY_RPC || 'Not set'}</li>
+          <li>SPG: {process.env.NEXT_PUBLIC_SPG_COLLECTION ? '✅ Set' : '❌ Not set'}</li>
+          <li>Pinata: {process.env.PINATA_JWT ? '✅ Set' : '❌ Not set'}</li>
+        </ul>
+      </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-card border rounded-lg p-4">
-            <h3 className="font-semibold">🔄 Token Swap</h3>
-            <p className="text-sm text-muted-foreground">
-              Swap tokens via PiperX Aggregator
-            </p>
-          </div>
-          
-          <div className="bg-card border rounded-lg p-4">
-            <h3 className="font-semibold">📋 IP Registration</h3>
-            <p className="text-sm text-muted-foreground">
-              Register IP on Story Protocol
-            </p>
-          </div>
-        </div>
-
-        <div className="text-sm text-muted-foreground">
-          <p>Environment loaded: ✅</p>
-          <p>Chain ID: {process.env.NEXT_PUBLIC_STORY_CHAIN_ID}</p>
-          <p>RPC: {process.env.NEXT_PUBLIC_STORY_RPC}</p>
-        </div>
+      <div className="mt-6 text-sm text-gray-600">
+        <p>Jika halaman ini muncul dengan cepat, berarti basic setup sudah OK!</p>
+        <p>Masalah lambat kemungkinan dari Web3 dependencies yang berat.</p>
       </div>
     </div>
   );
