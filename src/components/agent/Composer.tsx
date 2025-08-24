@@ -7,6 +7,7 @@ import { useFileUpload } from "@/hooks/useFileUpload";
 interface ComposerProps {
   onSubmit: (prompt: string) => void;
   status?: string;
+  fileUpload?: ReturnType<typeof useFileUpload>;
 }
 
 export function Composer({ onSubmit, status }: ComposerProps) {
@@ -90,7 +91,7 @@ export function Composer({ onSubmit, status }: ComposerProps) {
                 ? "Connect wallet to send"
                 : !prompt.trim()
                 ? "Type a prompt"
-                : "Send (Ctrl/���+Enter)"
+                : "Send (Ctrl/⌘+Enter)"
             }
           >
             <Send className="h-5 w-5" />
