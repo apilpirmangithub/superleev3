@@ -12,6 +12,7 @@ import { PlanBox } from "./PlanBox";
 import { HistorySidebar } from "./HistorySidebar";
 import { Toast } from "./Toast";
 import type { Hex } from "viem";
+import type { SwapIntent, RegisterIntent } from "@/lib/agent/engine";
 
 export function AgentOrchestrator() {
   const chatAgent = useChatAgent();
