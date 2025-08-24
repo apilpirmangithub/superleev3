@@ -7,12 +7,20 @@ export type Message = {
   ts: number;
 };
 
-// Plan types
-export type Plan = {
-  type: "swap" | "register";
+// Plan types - using discriminated unions
+export type SwapPlan = {
+  type: "swap";
   steps: string[];
-  intent: SwapIntent | RegisterIntent;
+  intent: SwapIntent;
 };
+
+export type RegisterPlan = {
+  type: "register";
+  steps: string[];
+  intent: RegisterIntent;
+};
+
+export type Plan = SwapPlan | RegisterPlan;
 
 // Swap agent state
 export type SwapState = {
