@@ -41,7 +41,8 @@ export function AgentOrchestrator() {
 
     if (plan.type === "swap") {
       chatAgent.updateStatus("🔄 Executing swap...");
-      
+
+      // TypeScript now knows plan is SwapPlan and plan.intent is SwapIntent
       const result = await swapAgent.executeSwap(plan.intent);
       
       if (result.success) {
