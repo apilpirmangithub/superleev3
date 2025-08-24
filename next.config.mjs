@@ -7,12 +7,6 @@ const nextConfig = {
     'ecefd70eea9d4364b9043636178e092d-c9d3c388-1862-406c-bb93-a955e3.fly.dev'
   ],
 
-  // Optimize development
-  swcMinify: true,
-  compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
-  },
-
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'ipfs.io' },
@@ -21,36 +15,20 @@ const nextConfig = {
     ],
   },
 
-  webpack: (config, { dev, isServer }) => {
-    // Optimize bundle
-    config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      'pino-pretty': false,
-      'react-native': false,
-      '@metamask/sdk': false,
-    };
-
+  webpack: (config) => {
+    // Reduce bundle size by excluding unnecessary polyfills
     config.resolve.fallback = {
-      ...(config.resolve.fallback || {}),
-      encoding: false,
+      ...config.resolve.fallback,
       fs: false,
       net: false,
       tls: false,
+      encoding: false,
     };
 
-    // Enable better caching in production
-    if (!dev) {
-      config.cache = {
-        type: 'filesystem',
-      };
-    }
+    // Exclude problematic modules
+    config.externals.push('pino-pretty', 'lokijs', 'encoding');
 
     return config;
-  },
-
-  // Development optimizations
-  experimental: {
-    optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
 };
 
