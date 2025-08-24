@@ -94,7 +94,7 @@ Tx: ${result.txHash}
 Image: ${result.imageUrl}
 IP Metadata: ${result.ipMetadataUrl}
 NFT Metadata: ${result.nftMetadataUrl}
-��� View: ${explorerBase}/tx/${result.txHash}`;
+↗ View: ${explorerBase}/tx/${result.txHash}`;
             
             chatAgent.addMessage("agent", successMessage);
             setToast("IP registered ✅");
@@ -155,9 +155,10 @@ NFT Metadata: ${result.nftMetadataUrl}
           </div>
 
           {/* Composer */}
-          <Composer 
+          <Composer
             onSubmit={chatAgent.processPrompt}
             status={chatAgent.status}
+            fileUpload={fileUpload}
           />
         </section>
       </div>
