@@ -38,13 +38,10 @@ const nextConfig = {
       tls: false,
     };
 
-    // Speed up development builds
-    if (dev && !isServer) {
+    // Enable better caching in production
+    if (!dev) {
       config.cache = {
         type: 'filesystem',
-        buildDependencies: {
-          config: [import.meta.url],
-        },
       };
     }
 
