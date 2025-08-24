@@ -10,12 +10,15 @@ interface ComposerProps {
   fileUpload?: ReturnType<typeof useFileUpload>;
 }
 
-export function Composer({ onSubmit, status }: ComposerProps) {
+export function Composer({ onSubmit, status, fileUpload: externalFileUpload }: ComposerProps) {
   const { isConnected } = useAccount();
   const [prompt, setPrompt] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const fileUpload = useFileUpload();
+  const internalFileUpload = useFileUpload();
+
+  // Use external file upload if provided, otherwise use internal
+  const fileUpload = externalFileUpload || internalFileUpload;
 
   const handleAutoGrow = (element: HTMLTextAreaElement) => {
     element.style.height = "auto";
