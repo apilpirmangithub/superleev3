@@ -54,7 +54,21 @@ function RKTheme({ children }: { children: React.ReactNode }) {
   );
 }
 
-const qc = new QueryClient();
+const qc = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) => {
+        // Don't retry on WalletConnect errors
+        if (error?.message?.includes('WalletConnect') ||
+            error?.message?.includes('getRecomendedWallets')) {
+          return false;
+        }
+        return failureCount < 3;
+      },
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
