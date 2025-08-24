@@ -9,8 +9,8 @@ import {
 } from "@rainbow-me/rainbowkit/wallets";
 import { storyAeneid } from "@/lib/chains/story";
 
-// WalletConnect Project ID (set di .env lokal & Vercel)
-const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID ?? "demo";
+// WalletConnect Project ID (optional)
+const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID;
 
 // RPC Story (boleh override)
 const rpcUrl =
@@ -18,7 +18,7 @@ const rpcUrl =
   storyAeneid.rpcUrls?.default?.http?.[0] ||
   "https://aeneid.storyrpc.io";
 
-// Create client-safe connectors (WalletConnect only on client-side)
+// Create client-safe connectors (WalletConnect only with valid project ID)
 function getConnectors() {
   const wallets = [
     injectedWallet,
@@ -26,8 +26,8 @@ function getConnectors() {
     coinbaseWallet,
   ];
 
-  // Only add WalletConnect on client-side to avoid SSR indexedDB errors
-  if (typeof window !== "undefined") {
+  // Only add WalletConnect on client-side with valid project ID
+  if (typeof window !== "undefined" && projectId && projectId !== "demo") {
     wallets.push(walletConnectWallet);
   }
 
@@ -40,7 +40,7 @@ function getConnectors() {
     ],
     {
       appName: "Superlee AI Agent",
-      projectId,
+      projectId: projectId || "fallback-demo-id",
     }
   );
 }
