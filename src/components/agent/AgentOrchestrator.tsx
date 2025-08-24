@@ -44,13 +44,14 @@ export function AgentOrchestrator() {
       const result = await swapAgent.executeSwap(plan.intent);
       
       if (result.success) {
+        const swapIntent = plan.intent; // TypeScript now knows this is SwapIntent
         const successMessage = `Swap success ✅
-From: ${plan.intent.tokenIn}
-To: ${plan.intent.tokenOut}
-Amount: ${plan.intent.amount}
+From: ${swapIntent.tokenIn}
+To: ${swapIntent.tokenOut}
+Amount: ${swapIntent.amount}
 Tx: ${result.txHash}
 ↗ View: ${explorerBase}/tx/${result.txHash}`;
-        
+
         chatAgent.addMessage("agent", successMessage);
         setToast("Swap success ✅");
       } else {
