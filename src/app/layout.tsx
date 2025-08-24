@@ -1,6 +1,6 @@
 // src/app/layout.tsx
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { ReactNode } from "react";
 import Providers from "./providers";
 import Topbar from "@/components/Topbar";
@@ -8,11 +8,14 @@ import Topbar from "@/components/Topbar";
 export const metadata: Metadata = {
   title: "Superlee AI Agent",
   description: "Swap via PiperX + Register IP on Story",
+  other: { "color-scheme": "light dark" },
+};
+
+export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f7fafc" },
     { media: "(prefers-color-scheme: dark)", color: "#0b0f1a" },
   ],
-  other: { "color-scheme": "light dark" },
 };
 
 // Inline script untuk set class "dark" SEBELUM hydrate (anti kedip)
