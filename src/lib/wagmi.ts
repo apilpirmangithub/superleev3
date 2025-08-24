@@ -9,8 +9,33 @@ import {
 } from "@rainbow-me/rainbowkit/wallets";
 import { storyAeneid } from "@/lib/chains/story";
 
-// WalletConnect Project ID (set di .env lokal & Vercel)
-const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID ?? "demo";
+// WalletConnect Project ID (REQUIRED for production deployment)
+const projectId = (() => {
+  const id = process.env.NEXT_PUBLIC_WC_PROJECT_ID;
+
+  if (!id) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'NEXT_PUBLIC_WC_PROJECT_ID is required for production deployment. ' +
+        'Get your project ID from https://cloud.walletconnect.com'
+      );
+    }
+    console.warn(
+      '⚠️  NEXT_PUBLIC_WC_PROJECT_ID not set. Using demo mode for development. ' +
+      'For production, get your project ID from https://cloud.walletconnect.com'
+    );
+    return "demo";
+  }
+
+  if (id === "demo") {
+    console.warn(
+      '⚠️  Using "demo" as WalletConnect project ID. ' +
+      'This may cause issues in production. Get a real project ID from https://cloud.walletconnect.com'
+    );
+  }
+
+  return id;
+})();
 
 // RPC Story (boleh override)
 const rpcUrl =
