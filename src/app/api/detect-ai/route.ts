@@ -84,28 +84,42 @@ async function detectWithSightEngine(imageBase64: string): Promise<{ isAI: boole
 
 // Fallback simulation for when SightEngine is not available
 async function simulateAIDetection(buffer: Buffer): Promise<number> {
-  // This is a simulation for demo purposes
+  // Fast simulation for demo purposes
   // Used as fallback when SightEngine is not configured
-  
+
   try {
     const imageSize = buffer.length;
-    
-    // Simulate analysis delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Simple heuristics for demo (replace with real AI detection)
-    let confidence = 0.3; // Base confidence
-    
-    // Size-based heuristic
-    if (imageSize > 1000000) confidence += 0.1; // Large files might be AI-generated
-    if (imageSize < 50000) confidence += 0.2; // Very small files might be AI
-    
-    // Random factor for demo variation
-    confidence += Math.random() * 0.4;
-    
-    // Clamp between 0 and 1
-    return Math.min(Math.max(confidence, 0), 1);
-    
+
+    // Much faster analysis delay for better UX
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Enhanced heuristics for more realistic demo results
+    let confidence = 0.25; // Base confidence
+
+    // File size analysis (AI images often have specific size patterns)
+    if (imageSize > 2000000) confidence += 0.3; // Very large files often AI-generated
+    if (imageSize < 100000) confidence += 0.2; // Very small files might be AI-compressed
+
+    // Simulate different AI detection scenarios for variety
+    const scenarios = [
+      0.15, // Clearly human-made
+      0.25, // Probably human-made
+      0.45, // Uncertain
+      0.75, // Likely AI-generated
+      0.85, // Very likely AI-generated
+      0.95  // Almost certainly AI-generated
+    ];
+
+    // Add weighted random selection for more realistic results
+    const randomScenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+    confidence = (confidence + randomScenario) / 2;
+
+    // Add small random variation for realism
+    confidence += (Math.random() - 0.5) * 0.1;
+
+    // Clamp between 0.05 and 0.95 for realistic bounds
+    return Math.min(Math.max(confidence, 0.05), 0.95);
+
   } catch (error) {
     console.error("Simulation error:", error);
     return 0.3; // Default confidence
