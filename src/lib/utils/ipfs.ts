@@ -25,122 +25,45 @@ export function toIpfsUri(cidOrUrl?: string) {
 }
 
 /**
- * Enhanced fetch with JSON parsing and error handling
+ * Simple fetch with JSON parsing and error handling (no retry)
  */
 export async function fetchJSON(input: RequestInfo | URL, init?: RequestInit) {
   const r = await fetch(input, init);
-  const t = await r.text();
-  if (!r.ok)
-    throw new Error(
-      `HTTP ${r.status}${r.statusText ? " " + r.statusText : ""}: ${t.slice(
-        0,
-        200
-      )}`
-    );
-  try {
-    return JSON.parse(t);
-  } catch {
-    throw new Error(`Server returned non-JSON: ${t.slice(0, 200)}`);
+  if (!r.ok) {
+    const errorText = await r.text();
+    throw new Error(`HTTP ${r.status}: ${errorText}`);
   }
+  return await r.json(); // ✅ Langsung parse JSON
 }
 
 /**
- * Retry helper with exponential backoff
- */
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  maxRetries: number = 2,
-  baseDelay: number = 1000
-): Promise<T> {
-  let lastError: Error;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error as Error;
-
-      if (attempt === maxRetries) {
-        throw new Error(`Upload failed after ${maxRetries + 1} attempts: ${lastError.message}`);
-      }
-
-      // Exponential backoff: 1s, 2s, 4s...
-      const delay = baseDelay * Math.pow(2, attempt);
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-
-  throw lastError!;
-}
-
-/**
- * Upload file to IPFS via API route with retry mechanism
+ * Upload file to IPFS via API route (no retry mechanism)
  */
 export async function uploadFile(file: File) {
   if (!file) {
     throw new Error("No file provided for upload");
   }
 
-  return withRetry(async () => {
-    // Create fresh FormData for each attempt to avoid "body stream already read" error
-    const fd = new FormData();
-    fd.append("file", file, file.name);
+  const fd = new FormData();
+  fd.append("file", file, file.name);
 
-    const response = await fetch("/api/ipfs/file", {
-      method: "POST",
-      body: fd,
-    });
-
-    // Clone response to avoid "body stream already read" error on retry
-    const responseClone = response.clone();
-    const text = await responseClone.text();
-
-    if (!response.ok) {
-      throw new Error(
-        `HTTP ${response.status}${response.statusText ? " " + response.statusText : ""}: ${text.slice(0, 200)}`
-      );
-    }
-
-    try {
-      return JSON.parse(text);
-    } catch {
-      throw new Error(`Server returned non-JSON: ${text.slice(0, 200)}`);
-    }
+  return await fetchJSON("/api/ipfs/file", {
+    method: "POST",
+    body: fd,
   });
 }
 
 /**
- * Upload JSON to IPFS via API route with retry mechanism
+ * Upload JSON to IPFS via API route (no retry mechanism)
  */
 export async function uploadJSON(obj: any) {
   if (!obj) {
     throw new Error("No object provided for upload");
   }
 
-  return withRetry(async () => {
-    // Create fresh body for each attempt
-    const jsonBody = JSON.stringify(obj);
-
-    const response = await fetch("/api/ipfs/json", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: jsonBody,
-    });
-
-    // Clone response to avoid "body stream already read" error on retry
-    const responseClone = response.clone();
-    const text = await responseClone.text();
-
-    if (!response.ok) {
-      throw new Error(
-        `HTTP ${response.status}${response.statusText ? " " + response.statusText : ""}: ${text.slice(0, 200)}`
-      );
-    }
-
-    try {
-      return JSON.parse(text);
-    } catch {
-      throw new Error(`Server returned non-JSON: ${text.slice(0, 200)}`);
-    }
+  return await fetchJSON("/api/ipfs/json", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(obj),
   });
 }
