@@ -8,7 +8,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'gateway.pinata.cloud' },
     ],
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config) => {
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
       'pino-pretty': false,     // hilangkan warning modul optional
@@ -23,21 +23,6 @@ const nextConfig = {
       net: false,
       tls: false,
     };
-
-    // Handle SSR issues with wallet connectors
-    if (isServer) {
-      config.externals = [
-        ...(config.externals || []),
-        {
-          'idb-keyval': 'idb-keyval',
-          '@walletconnect/core': '@walletconnect/core',
-          '@walletconnect/sign-client': '@walletconnect/sign-client',
-          '@walletconnect/ethereum-provider': '@walletconnect/ethereum-provider',
-        }
-      ];
-    }
-
-    // No additional plugins needed for now
 
     return config;
   },
