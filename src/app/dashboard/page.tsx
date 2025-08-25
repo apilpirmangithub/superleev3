@@ -19,7 +19,7 @@ type Item = {
 };
 
 const AENEID_ID = 1315;
-const START_BLOCK = BigInt(process.env.NEXT_PUBLIC_SPG_COLLECTION_ADDRESS_START_BLOCK ?? "0");
+const START_BLOCK = BigInt(process.env.NEXT_PUBLIC_SPG_START_BLOCK ?? "0");
 
 // IERC165: ERC721Enumerable = 0x780e9d63
 const IFACE_ENUMERABLE = "0x780e9d63";
@@ -283,7 +283,7 @@ export default function DashboardPage() {
         <p className="text-sm opacity-70">
           Collection:{" "}
           <code className="opacity-90">
-            {SPG_COLLECTION_ADDRESS || "(set NEXT_PUBLIC_SPG_COLLECTION_ADDRESS_COLLECTION)"}
+            {SPG_COLLECTION_ADDRESS}
           </code>
         </p>
       </div>
@@ -293,7 +293,7 @@ export default function DashboardPage() {
       )}
       {!SPG_COLLECTION_ADDRESS && (
         <div className="card">
-          Set <code>NEXT_PUBLIC_SPG_COLLECTION_ADDRESS_COLLECTION</code> di <code>.env.local</code>.
+          Set <code>NEXT_PUBLIC_SPG_COLLECTION</code> di <code>.env.local</code>.
         </div>
       )}
       {isConnected && SPG_COLLECTION_ADDRESS && chainId !== AENEID_ID && (
