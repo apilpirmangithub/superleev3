@@ -11,6 +11,7 @@ interface ComposerProps {
   onFileRemove?: () => void;
   previewUrl?: string | null;
   isTyping?: boolean;
+  awaitingInput?: string | null;
 }
 
 const EMOJI_SUGGESTIONS = ["👋", "😊", "🚀", "💎", "⚡", "🎯", "🔥", "✨"];
@@ -22,7 +23,8 @@ export function Composer({
   onFileSelect,
   onFileRemove,
   previewUrl,
-  isTyping
+  isTyping,
+  awaitingInput
 }: ComposerProps) {
   const { isConnected } = useAccount();
   const [prompt, setPrompt] = useState("");
@@ -39,6 +41,17 @@ export function Composer({
       handleAutoGrow(textareaRef.current);
     }
   }, [prompt]);
+
+  // Auto-focus when SuperLee is waiting for input
+  useEffect(() => {
+    if (awaitingInput && textareaRef.current && isConnected) {
+      // Small delay to ensure UI is ready
+      const timer = setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [awaitingInput, isConnected]);
 
   const handleSubmit = () => {
     const trimmedPrompt = prompt.trim();
