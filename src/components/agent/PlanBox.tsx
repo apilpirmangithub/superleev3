@@ -29,11 +29,7 @@ export function PlanBox({ plan, onConfirm, onCancel, swapState, registerState }:
     
     if (plan.type === "register" && registerState) {
       switch (registerState.status) {
-        case 'compressing': return "Compressing image...";
-        case 'uploading-image': return "Uploading to IPFS...";
-        case 'creating-metadata': return "Creating metadata...";
-        case 'uploading-metadata': return "Uploading metadata...";
-        case 'minting': return "Minting NFT & registering IP...";
+        case 'processing': return registerState.step || "Processing...";
         case 'success': return "IP registered successfully!";
         case 'error': return "Registration failed";
         default: return "";

@@ -292,7 +292,7 @@ AI Detected: ${result.aiDetected ? 'Yes 🤖' : 'No 👨‍🎨'}`;
                     onConfirm={executePlan}
                     onCancel={chatAgent.clearPlan}
                     swapState={swapAgent.swapState}
-                    registerState={registerAgent.registerState}
+                    registerState={simpleRegister.state}
                   />
                 )}
               </div>
