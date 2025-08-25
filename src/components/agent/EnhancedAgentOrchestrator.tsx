@@ -53,7 +53,7 @@ export function EnhancedAgentOrchestrator() {
     setAiDetectionResult(null);
 
     // Add immediate message when starting analysis
-    chatAgent.addMessage("agent", "Wait a moment, let me analyze if your image is AI generated or real...");
+    chatAgent.addMessage("agent", "Wait a moment, let me analyze if your image is AI generated or real......");
 
     // Store file reference before removing preview
     const currentFile = fileUpload.file;
