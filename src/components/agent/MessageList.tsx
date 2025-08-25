@@ -63,9 +63,6 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
           <p className="text-sm text-white/60 max-w-md">
             Psst... just type "SUP" to wake me up! 😉
           </p>
-          <div className="mt-4 text-xs text-white/40">
-            Psst... just type "SUP" to wake me up! 😉
-          </div>
         </div>
       </div>
     );
