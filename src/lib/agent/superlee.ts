@@ -280,12 +280,12 @@ export class SuperleeEngine {
     this.context.registerData.aiDetected = aiResult.isAI;
     this.context.registerData.aiConfidence = aiResult.confidence;
 
-    let response = `✅ AI analysis completed!\n\n`;
+    let response = `✅ File processed successfully!\n\n`;
 
     if (aiResult.isAI) {
-      response += `🤖 Result: This image was created by AI (confidence: ${(aiResult.confidence * 100).toFixed(1)}%)\n\n⚠️ Note: "AI Training Allowed" license option will not be available for AI-generated content.`;
+      response += `🤖 This appears to be AI-generated content\n\nDon't worry - you can still register it with any license type!`;
     } else {
-      response += `👨‍🎨 Result: This image was created manually/originally (confidence: ${((1 - aiResult.confidence) * 100).toFixed(1)}%)\n\n✅ All license options are available for this content.`;
+      response += `👨‍🎨 This appears to be original human-created content\n\nGreat! All license options are available.`;
     }
 
     this.context.state = "register_awaiting_name";
@@ -318,17 +318,13 @@ export class SuperleeEngine {
     this.context.registerData.description = description.trim();
     this.context.state = "register_awaiting_license";
     
-    const aiDetected = this.context.registerData.aiDetected || false;
-    const licenseOptions = getLicenseOptions(aiDetected);
-    
-    let message = "Which license type would you like to choose?\n\n";
-    licenseOptions.forEach((option, index) => {
-      message += `${index + 1}. ${option}\n`;
-    });
-    
-    if (aiDetected) {
-      message += "\n⚠️ Note: AI Training Allowed is not available for AI-generated content.";
-    }
+    const licenseOptions = getLicenseOptions();
+
+    let message = "How do you want others to use your IP?\n\n";
+    message += "• **Open** - Anyone can use freely\n";
+    message += "• **Remix Allowed** - Can be modified and shared\n";
+    message += "• **Commercial** - Can be sold with revenue share\n\n";
+    message += "Choose the license that works best for you:";
     
     return {
       type: "message",
