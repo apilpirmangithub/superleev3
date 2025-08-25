@@ -12,6 +12,7 @@ import {
 } from "@/lib/piperx";
 import { useStoryClient } from "@/lib/storyClient";
 import { storyAeneid } from "@/lib/chains/story";
+import { SPG_COLLECTION_ADDRESS } from "@/lib/constants";
 import { Paperclip, Check, X, Send } from "lucide-react";
 import { parseUnits, toHex, keccak256, type Hex } from "viem";
 
@@ -322,7 +323,7 @@ Tx: ${tx.hash}
         const nftMetadataURI = toIpfsUri(nftMetaCid);
         const nftMetadataHash = await keccakOfJson(nftMeta);
 
-        showStatus("Submit tx: mint & register IP…");
+        showStatus("Submit tx: mint & register IP��");
         const client = await getClient();
         const res = await client.ipAsset.mintAndRegisterIp({
           spgNftContract: (process.env.NEXT_PUBLIC_SPG_COLLECTION ||
