@@ -326,8 +326,7 @@ Tx: ${tx.hash}
         showStatus("Submit tx: mint & register IP��");
         const client = await getClient();
         const res = await client.ipAsset.mintAndRegisterIp({
-          spgNftContract: (process.env.NEXT_PUBLIC_SPG_COLLECTION ||
-            "0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc") as `0x${string}`,
+          spgNftContract: SPG_COLLECTION_ADDRESS,
           recipient: address as `0x${string}`,
           ipMetadata: {
             ipMetadataURI,
