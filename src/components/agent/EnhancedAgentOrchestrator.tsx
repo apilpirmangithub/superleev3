@@ -162,17 +162,35 @@ Tx: ${result.txHash}
           );
 
           if (confirmed) {
-            const successMessage = `Register success ✅
-ipId: ${result.ipId}
-Tx: ${result.txHash}
-Image: ${result.imageUrl}
-IP Metadata: ${result.ipMetadataUrl}
-NFT Metadata: ${result.nftMetadataUrl}
+            const successText = `Register success ✅
+
+Your image has been successfully registered as IP!
+
 License Type: ${result.licenseType}
-AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) * 100).toFixed(1)}%)
-↗ View: ${explorerBase}/tx/${result.txHash}`;
-            
-            chatAgent.addMessage("agent", successMessage);
+AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) * 100).toFixed(1)}%)`;
+
+            // Create message with image and links
+            const message = {
+              role: "agent" as const,
+              text: successText,
+              ts: Date.now(),
+              image: result.imageUrl ? {
+                url: result.imageUrl,
+                alt: "Registered IP image"
+              } : undefined,
+              links: [
+                {
+                  text: `📋 View IP: ${result.ipId}`,
+                  url: `https://aeneid.explorer.story.foundation/ipa/${result.ipId}`
+                },
+                {
+                  text: `🔗 View Transaction: ${result.txHash}`,
+                  url: `${explorerBase}/tx/${result.txHash}`
+                }
+              ]
+            };
+
+            chatAgent.messages.push(message);
             setToast("IP registered ✅");
           } else {
             chatAgent.updateStatus("Tx still pending on network. Check explorer.");
