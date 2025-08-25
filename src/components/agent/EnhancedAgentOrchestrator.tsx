@@ -60,8 +60,8 @@ export function EnhancedAgentOrchestrator() {
         status: 'completed'
       });
       
-      // Process the AI detection with Superlee engine
-      chatAgent.processPrompt("File uploaded", fileUpload.file, result);
+      // Process the AI detection result with Superlee engine
+      chatAgent.processPrompt("AI analysis completed", fileUpload.file, result);
     } catch (error) {
       console.error('AI detection failed:', error);
       setAiDetectionResult({
@@ -70,7 +70,7 @@ export function EnhancedAgentOrchestrator() {
         status: 'failed'
       });
       // Continue with file upload even if AI detection fails
-      chatAgent.processPrompt("File uploaded", fileUpload.file, { isAI: false, confidence: 0 });
+      chatAgent.processPrompt("AI analysis completed", fileUpload.file, { isAI: false, confidence: 0 });
     } finally {
       setIsAnalyzing(false);
     }
