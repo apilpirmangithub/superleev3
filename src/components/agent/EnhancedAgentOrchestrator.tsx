@@ -4,7 +4,7 @@ import { storyAeneid } from "@/lib/chains/story";
 import { waitForTxConfirmation } from "@/lib/utils/transaction";
 import { useChatAgent } from "@/hooks/useChatAgent";
 import { useSwapAgent } from "@/hooks/useSwapAgent";
-import { useRegisterIPAgent } from "@/hooks/useRegisterIPAgent";
+import { useSimpleRegisterIP } from "@/hooks/useSimpleRegisterIP";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { DEFAULT_LICENSE_SETTINGS } from "@/lib/license/terms";
 import type { LicenseSettings } from "@/lib/license/terms";
@@ -19,7 +19,7 @@ import type { Hex } from "viem";
 export function EnhancedAgentOrchestrator() {
   const chatAgent = useChatAgent();
   const swapAgent = useSwapAgent();
-  const registerAgent = useRegisterIPAgent();
+  const simpleRegister = useSimpleRegisterIP();
   const fileUpload = useFileUpload();
   const publicClient = usePublicClient();
   
