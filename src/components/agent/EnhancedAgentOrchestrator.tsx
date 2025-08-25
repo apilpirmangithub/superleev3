@@ -6,8 +6,7 @@ import { useChatAgent } from "@/hooks/useChatAgent";
 import { useSwapAgent } from "@/hooks/useSwapAgent";
 import { useSimpleRegisterIP } from "@/hooks/useSimpleRegisterIP";
 import { useFileUpload } from "@/hooks/useFileUpload";
-import { DEFAULT_LICENSE_SETTINGS } from "@/lib/license/terms";
-import type { LicenseSettings } from "@/lib/license/terms";
+// Removed unused license imports
 import { MessageList } from "./MessageList";
 import { Composer } from "./Composer";
 import { PlanBox } from "./PlanBox";
