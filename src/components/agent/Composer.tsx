@@ -78,7 +78,7 @@ export function Composer({
 
   return (
     <div className="shrink-0 border-t border-white/10 bg-gradient-to-t from-black/20 to-transparent relative overflow-visible">
-      <div className="mx-auto w-full max-w-[820px] px-3 py-4">
+      <div className="mx-auto w-full max-w-[900px] px-2 sm:px-3 lg:px-4 py-3 lg:py-4">
         {/* File Preview */}
         {file && previewUrl && (
           <div className="mb-3 p-3 rounded-2xl bg-white/8 border border-white/15 backdrop-blur-sm">
