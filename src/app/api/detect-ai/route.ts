@@ -10,23 +10,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
     }
 
-    // For demo purposes, we'll simulate AI detection based on image characteristics
-    // In production, you would integrate with actual AI detection services like:
-    // - Hive AI Detection API
-    // - Microsoft Computer Vision
-    // - Google Cloud Vision AI
-    // - Custom ML models
-    
-    const buffer = Buffer.from(image, 'base64');
-    
-    // Simple heuristic for demo - analyze image characteristics
-    const confidence = await simulateAIDetection(buffer);
-    const isAI = confidence > 0.7;
+    // Try SightEngine first, fallback to simulation
+    try {
+      const result = await detectWithSightEngine(image);
+      return NextResponse.json(result);
+    } catch (sightEngineError) {
+      console.warn("SightEngine detection failed, using simulation:", sightEngineError);
+      
+      // Fallback to simulation
+      const buffer = Buffer.from(image, 'base64');
+      const confidence = await simulateAIDetection(buffer);
+      const isAI = confidence > 0.7;
 
-    return NextResponse.json({
-      isAI,
-      confidence: Math.round(confidence * 100) / 100
-    });
+      return NextResponse.json({
+        isAI,
+        confidence: Math.round(confidence * 100) / 100,
+        source: 'simulation'
+      });
+    }
 
   } catch (error: any) {
     console.error("AI detection error:", error);
@@ -37,9 +38,54 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// SightEngine AI Detection Integration
+async function detectWithSightEngine(imageBase64: string): Promise<{ isAI: boolean; confidence: number; source: string }> {
+  const SIGHTENGINE_API_USER = process.env.SIGHTENGINE_API_USER;
+  const SIGHTENGINE_API_SECRET = process.env.SIGHTENGINE_API_SECRET;
+  
+  if (!SIGHTENGINE_API_USER || !SIGHTENGINE_API_SECRET) {
+    throw new Error("SightEngine API credentials not configured");
+  }
+  
+  // Create form data for SightEngine API
+  const formData = new FormData();
+  formData.append('media', `data:image/jpeg;base64,${imageBase64}`);
+  formData.append('models', 'genai'); // AI-generated content detection model
+  formData.append('api_user', SIGHTENGINE_API_USER);
+  formData.append('api_secret', SIGHTENGINE_API_SECRET);
+  
+  const response = await fetch('https://api.sightengine.com/1.0/check.json', {
+    method: 'POST',
+    body: formData,
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`SightEngine API error: ${response.status} - ${errorText}`);
+  }
+  
+  const result = await response.json();
+  
+  // Check for API errors
+  if (result.status === 'failure') {
+    throw new Error(`SightEngine API failure: ${result.error?.message || 'Unknown error'}`);
+  }
+  
+  // Extract AI detection results
+  const aiGenerated = result.type?.ai_generated || 0;
+  const isAI = aiGenerated > 0.5; // Threshold for AI detection
+  
+  return {
+    isAI,
+    confidence: Math.round(aiGenerated * 100) / 100,
+    source: 'sightengine'
+  };
+}
+
+// Fallback simulation for when SightEngine is not available
 async function simulateAIDetection(buffer: Buffer): Promise<number> {
   // This is a simulation for demo purposes
-  // Replace with actual AI detection service integration
+  // Used as fallback when SightEngine is not configured
   
   try {
     const imageSize = buffer.length;
@@ -66,8 +112,14 @@ async function simulateAIDetection(buffer: Buffer): Promise<number> {
   }
 }
 
-// Alternative: Integration with external AI detection services
+// SightEngine API Documentation:
+// https://sightengine.com/docs/ai-generated-detection
+// Models available: 'genai' for AI-generated content detection
+// Response format: { type: { ai_generated: number } } where ai_generated is 0-1 confidence
+
+// Alternative detection services (for reference)
 /*
+// Hive AI Detection
 async function detectWithHiveAI(imageBase64: string): Promise<{ isAI: boolean; confidence: number }> {
   const HIVE_API_KEY = process.env.HIVE_AI_API_KEY;
   
@@ -99,55 +151,6 @@ async function detectWithHiveAI(imageBase64: string): Promise<{ isAI: boolean; c
   return {
     isAI: aiScore > 0.5,
     confidence: aiScore
-  };
-}
-
-async function detectWithOpenAI(imageBase64: string): Promise<{ isAI: boolean; confidence: number }> {
-  const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-  
-  if (!OPENAI_API_KEY) {
-    throw new Error("OpenAI API key not configured");
-  }
-  
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "gpt-4-vision-preview",
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Analyze this image and determine if it's AI-generated. Respond with only a number between 0 and 1 representing confidence that it's AI-generated."
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${imageBase64}`
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 10
-    })
-  });
-  
-  if (!response.ok) {
-    throw new Error("OpenAI API request failed");
-  }
-  
-  const result = await response.json();
-  const confidence = parseFloat(result.choices[0]?.message?.content || "0.3");
-  
-  return {
-    isAI: confidence > 0.5,
-    confidence
   };
 }
 */
