@@ -312,7 +312,7 @@ export default function DashboardPage() {
         <div className="card">
           There are no registered IPs yet.
           <div className="mt-2 text-xs opacity-70">
-            Tip: set <code>NEXT_PUBLIC_SPG_COLLECTION_ADDRESS_START_BLOCK</code> to speed up the full scan.
+            Tip: set <code>NEXT_PUBLIC_SPG_START_BLOCK</code> to speed up the full scan.
           </div>
         </div>
       )}
