@@ -87,7 +87,7 @@ export function AIDetectionDisplay({ result, isAnalyzing = false, className = ""
             <div className="flex items-center justify-between">
               <span className="text-sm text-white/70">Tingkat Keyakinan:</span>
               <span className={`text-sm font-medium ${getConfidenceColor(result.confidence)}`}>
-                {(result.confidence * 100).toFixed(1)}% ({getConfidenceText(result.confidence)})
+                {((result.confidence || 0) * 100).toFixed(1)}% ({getConfidenceText(result.confidence || 0)})
               </span>
             </div>
 
@@ -98,7 +98,7 @@ export function AIDetectionDisplay({ result, isAnalyzing = false, className = ""
                   result.confidence >= 0.8 ? 'bg-red-400' :
                   result.confidence >= 0.6 ? 'bg-yellow-400' : 'bg-green-400'
                 }`}
-                style={{ width: `${result.confidence * 100}%` }}
+                style={{ width: `${(result.confidence || 0) * 100}%` }}
               />
             </div>
 
