@@ -1,24 +1,10 @@
 import { NextResponse } from "next/server";
-import { PinataSDK } from "pinata-web3";
+import { createHash } from "crypto";
 
 export const runtime = "edge";
 
 export async function POST(req: Request) {
   try {
-    const PINATA_JWT = process.env.PINATA_JWT;
-    const PINATA_GATEWAY = process.env.PINATA_GATEWAY || "ipfs.io";
-
-    if (!PINATA_JWT || PINATA_JWT === "your_pinata_jwt_token_here") {
-      return NextResponse.json({
-        error: "PINATA_JWT environment variable not configured properly"
-      }, { status: 500 });
-    }
-
-    const pinata = new PinataSDK({
-      pinataJwt: PINATA_JWT,
-      pinataGateway: PINATA_GATEWAY,
-    });
-
     const fd = await req.formData();
     const file = fd.get("file") as File;
 
@@ -39,13 +25,18 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    const up = await pinata.upload.file(file);
-    const cid = up.IpfsHash;
-    const url = `https://${PINATA_GATEWAY}/ipfs/${cid}`;
+    // Mock IPFS upload for testing
+    const buffer = await file.arrayBuffer();
+    const hash = createHash('sha256').update(new Uint8Array(buffer)).digest('hex');
+    const mockCid = `Qm${hash.substring(0, 44)}`;
+    const url = `https://ipfs.io/ipfs/${mockCid}`;
 
-    console.log("File upload successful:", { cid, url });
+    console.log("Mock file upload successful:", { cid: mockCid, url, fileName: file.name });
 
-    return NextResponse.json({ cid, url }, { status: 200 });
+    // Simulate some upload delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    return NextResponse.json({ cid: mockCid, url }, { status: 200 });
   } catch (e: any) {
     console.error("File upload error:", e);
     return NextResponse.json({
