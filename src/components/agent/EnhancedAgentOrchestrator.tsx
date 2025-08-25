@@ -225,6 +225,7 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
                 <MessageList
                   messages={chatAgent.messages}
                   onButtonClick={handleButtonClick}
+                  isTyping={chatAgent.isTyping}
                 />
 
 
