@@ -102,8 +102,10 @@ async function simulateAIDetection(buffer: Buffer): Promise<number> {
   try {
     const imageSize = buffer.length;
 
-    // Much faster analysis delay for better UX
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Fast mode for development, or realistic delay for production
+    const fastMode = process.env.AI_DETECTION_FAST_MODE === 'true';
+    const delay = fastMode ? 300 : 800; // 300ms in dev, 800ms in prod
+    await new Promise(resolve => setTimeout(resolve, delay));
 
     // Enhanced heuristics for more realistic demo results
     let confidence = 0.25; // Base confidence
