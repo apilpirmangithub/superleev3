@@ -26,6 +26,7 @@ export function EnhancedAgentOrchestrator() {
   const [toast, setToast] = useState<string | null>(null);
   const [aiDetectionResult, setAiDetectionResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzedFile, setAnalyzedFile] = useState<File | null>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   
   const explorerBase = storyAeneid.blockExplorers?.default.url || "https://aeneid.storyscan.xyz";
@@ -56,6 +57,7 @@ export function EnhancedAgentOrchestrator() {
 
     // Store file reference before removing preview
     const currentFile = fileUpload.file;
+    setAnalyzedFile(currentFile);
 
     // Remove image preview immediately after upload
     setTimeout(() => {
@@ -116,7 +118,7 @@ Tx: ${result.txHash}
     }
     
     else if (plan.type === "register" && plan.intent.kind === "register") {
-      if (!fileUpload.file) {
+      if (!analyzedFile) {
         chatAgent.addMessage("agent", "❌ Please attach an image first!");
         setToast("Attach image first 📎");
         return;
@@ -130,7 +132,7 @@ Tx: ${result.txHash}
         pilType: plan.intent.pilType || DEFAULT_LICENSE_SETTINGS.pilType,
       };
 
-      const result = await registerAgent.executeRegister(plan.intent, fileUpload.file, licenseSettings);
+      const result = await registerAgent.executeRegister(plan.intent, analyzedFile, licenseSettings);
       
       if (result.success) {
         // Show initial success with transaction link
@@ -172,7 +174,7 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
       
       chatAgent.clearPlan();
       registerAgent.resetRegister();
-      fileUpload.removeFile();
+      setAnalyzedFile(null);
       setAiDetectionResult(null);
     }
   }, [
