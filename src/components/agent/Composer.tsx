@@ -12,6 +12,7 @@ interface ComposerProps {
   previewUrl?: string | null;
   isTyping?: boolean;
   awaitingInput?: string | null;
+  messages?: any[];
 }
 
 const EMOJI_SUGGESTIONS = ["👋", "😊", "🚀", "💎", "⚡", "🎯", "🔥", "✨"];
@@ -24,7 +25,8 @@ export function Composer({
   onFileRemove,
   previewUrl,
   isTyping,
-  awaitingInput
+  awaitingInput,
+  messages
 }: ComposerProps) {
   const { isConnected } = useAccount();
   const [prompt, setPrompt] = useState("");
@@ -42,6 +44,29 @@ export function Composer({
     }
   }, [prompt]);
 
+  // Check if the last message from SuperLee is asking for input
+  const isLastMessageRequestingInput = () => {
+    if (!messages || messages.length === 0) return false;
+
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.role !== "agent") return false;
+
+    const text = lastMessage.text.toLowerCase();
+
+    // Pattern matching for input requests
+    const inputPatterns = [
+      /what is the name/i,
+      /give me a description/i,
+      /which tokens do you want/i,
+      /how much .* do you want/i,
+      /please enter/i,
+      /please specify/i,
+      /\?\s*$/  // Ends with question mark
+    ];
+
+    return inputPatterns.some(pattern => pattern.test(text));
+  };
+
   // Auto-focus when SuperLee is waiting for input
   useEffect(() => {
     if (awaitingInput && textareaRef.current && isConnected) {
@@ -52,6 +77,17 @@ export function Composer({
       return () => clearTimeout(timer);
     }
   }, [awaitingInput, isConnected]);
+
+  // Auto-focus when SuperLee sends a message requesting input
+  useEffect(() => {
+    if (isLastMessageRequestingInput() && textareaRef.current && isConnected && !isTyping) {
+      // Small delay to ensure UI is ready and typing animation is complete
+      const timer = setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 1000); // Longer delay to wait for typing animation
+      return () => clearTimeout(timer);
+    }
+  }, [messages, isConnected, isTyping]);
 
   const handleSubmit = () => {
     const trimmedPrompt = prompt.trim();
