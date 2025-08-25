@@ -33,7 +33,7 @@ function TypingIndicator() {
         </div>
         <div className="flex-1">
           <div className="text-xs text-white/50 font-medium mb-1">
-            SUPERLEE ASSISTANT
+            Chat with Superlee
           </div>
           <div className="bg-white/8 border border-white/10 rounded-2xl rounded-tl-md px-4 py-3 shadow-sm hover-glow transition-smooth">
             <div className="flex items-center gap-1">
@@ -59,12 +59,12 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
           <Bot className="h-8 w-8 text-white" />
         </div>
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-white mb-2">SUPERLEE ASSISTANT</h3>
+          <h3 className="text-lg font-semibold text-white mb-2">Chat with Superlee</h3>
           <p className="text-sm text-white/60 max-w-md">
-            Start a conversation with your AI assistant. You can swap tokens or register IP with simple commands.
+            Your crypto companion is ready to help! 🚀 I can swap your tokens faster than you can say "blockchain" or help you register IP like a digital notary! 📝
           </p>
           <div className="mt-4 text-xs text-white/40">
-            Try: "Swap 1 WIP to USDC" or "Register this image IP"
+            Psst... just type "SUP" to wake me up! 😉
           </div>
         </div>
       </div>
@@ -110,7 +110,7 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
                   {/* Sender name (only for agent) */}
                   {!isUser && (
                     <div className="text-xs text-white/50 font-medium">
-                      SUPERLEE ASSISTANT
+                      Chat with Superlee
                     </div>
                   )}
 
