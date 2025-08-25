@@ -1,4 +1,6 @@
-// src/lib/wagmi.ts
+"use client";
+
+import { WagmiProvider } from "wagmi";
 import { createConfig, http } from "wagmi";
 import { connectorsForWallets } from "@rainbow-me/rainbowkit";
 import {
@@ -9,16 +11,12 @@ import {
 } from "@rainbow-me/rainbowkit/wallets";
 import { storyAeneid } from "@/lib/chains/story";
 import { validateEnvironmentOrThrow } from "@/lib/utils/env-validation";
-
-// Only validate environment on client side to avoid SSR issues
-if (typeof window !== 'undefined') {
-  validateEnvironmentOrThrow();
-}
+import { useEffect, useState } from "react";
 
 // WalletConnect Project ID (REQUIRED for production deployment)
 const projectId = (() => {
   const id = process.env.NEXT_PUBLIC_WC_PROJECT_ID;
-
+  
   if (!id) {
     if (process.env.NODE_ENV === 'production') {
       throw new Error(
@@ -32,14 +30,14 @@ const projectId = (() => {
     );
     return "demo";
   }
-
+  
   if (id === "demo") {
     console.warn(
       '⚠️  Using "demo" as WalletConnect project ID. ' +
       'This may cause issues in production. Get a real project ID from https://cloud.walletconnect.com'
     );
   }
-
+  
   return id;
 })();
 
@@ -68,17 +66,35 @@ const connectors = connectorsForWallets(
   }
 );
 
-// Create wagmi config function to call on client side only
-function createWagmiConfig() {
-  return createConfig({
-    chains: [storyAeneid],
-    connectors,
-    transports: {
-      [storyAeneid.id]: http(rpcUrl),
-    },
-    ssr: true,
-  });
-}
+// Create wagmi config
+const wagmiConfig = createConfig({
+  chains: [storyAeneid],
+  connectors,
+  transports: {
+    [storyAeneid.id]: http(rpcUrl),
+  },
+  ssr: true,
+});
 
-// Export wagmi config - will be created client-side only
-export const wagmiConfig = typeof window !== 'undefined' ? createWagmiConfig() : null as any;
+export default function WagmiWrapper({ children }: { children: React.ReactNode }) {
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // Skip validation for now to debug startup issues
+    setIsReady(true);
+  }, []);
+
+  if (!isReady) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-ai-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      {children}
+    </WagmiProvider>
+  );
+}

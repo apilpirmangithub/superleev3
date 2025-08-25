@@ -6,10 +6,7 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount, useBalance, useReadContract } from "wagmi";
 import { erc721Abi } from "@/lib/abi/erc721";
 import ThemeToggle from "@/components/ThemeToggle";
-
-const SPG_COLLECTION =
-  (process.env.NEXT_PUBLIC_SPG_COLLECTION as `0x${string}`) ||
-  "0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc";
+import { SPG_COLLECTION_ADDRESS } from "@/lib/constants";
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
@@ -50,7 +47,7 @@ export default function Topbar() {
 
   const { data: ipCount } = useReadContract({
     abi: erc721Abi,
-    address: SPG_COLLECTION,
+    address: SPG_COLLECTION_ADDRESS,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
     query: { enabled: isConnected && !!address },

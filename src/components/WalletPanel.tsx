@@ -6,10 +6,7 @@ import { storyAeneid } from "@/lib/chains/story";
 import { erc20Abi } from "@/lib/abi/erc20";
 import { erc721Abi } from "@/lib/abi/erc721";
 import { WIP } from "@/lib/piperx";
-
-const SPG_COLLECTION =
-  (process.env.NEXT_PUBLIC_SPG_COLLECTION as `0x${string}`) ||
-  "0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc";
+import { SPG_COLLECTION_ADDRESS } from "@/lib/constants";
 
 const publicClient = createPublicClient({
   chain: storyAeneid,
@@ -48,7 +45,7 @@ export default function WalletPanel() {
 
       // Total IP (jumlah NFT di koleksi SPG)
       const count = (await publicClient.readContract({
-        address: SPG_COLLECTION,
+        address: SPG_COLLECTION_ADDRESS,
         abi: erc721Abi,
         functionName: "balanceOf",
         args: [address],
