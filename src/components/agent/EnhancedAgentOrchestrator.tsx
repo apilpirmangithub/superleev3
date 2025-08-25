@@ -13,7 +13,6 @@ import { Composer } from "./Composer";
 import { PlanBox } from "./PlanBox";
 import { HistorySidebar } from "./HistorySidebar";
 import { Toast } from "./Toast";
-import { AIDetectionDisplay } from "../AIDetectionDisplay";
 import { detectAI, fileToBuffer } from "@/services";
 import type { Hex } from "viem";
 
@@ -228,15 +227,6 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
                   onButtonClick={handleButtonClick}
                 />
 
-                {/* AI Detection Display */}
-                {fileUpload.file && (
-                  <div className="mt-4">
-                    <AIDetectionDisplay
-                      result={aiDetectionResult}
-                      isAnalyzing={isAnalyzing}
-                    />
-                  </div>
-                )}
 
                 {/* Plan Box */}
                 {chatAgent.currentPlan && (
