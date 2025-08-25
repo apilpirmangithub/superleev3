@@ -3,7 +3,7 @@ import { useAccount, useChainId, useSwitchChain } from "wagmi";
 import { useStoryClient } from "@/lib/storyClient";
 import { compressImage } from "@/lib/utils/image";
 import { uploadFile, uploadJSON, extractCid, toHttps, toIpfsUri } from "@/lib/utils/ipfs";
-import { sha256HexOfFile, keccakOfJson } from "@/lib/utils/crypto";
+import { keccakOfFile, keccakOfJson } from "@/lib/utils/crypto";
 import type { RegisterIntent } from "@/lib/agent/engine";
 import type { RegisterState } from "@/types/agents";
 
