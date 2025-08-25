@@ -9,7 +9,7 @@ import {
   useSwitchChain,
 } from "wagmi";
 import { erc721Abi, parseAbiItem } from "viem";
-import { SPG_COLLECTION_ADDRESS } from "@/lib/constants";
+import { SPG_COLLECTION_ADDRESS_COLLECTION_ADDRESS } from "@/lib/constants";
 
 type Item = {
   tokenId: string;
@@ -19,7 +19,7 @@ type Item = {
 };
 
 const AENEID_ID = 1315;
-const START_BLOCK = BigInt(process.env.NEXT_PUBLIC_SPG_START_BLOCK ?? "0");
+const START_BLOCK = BigInt(process.env.NEXT_PUBLIC_SPG_COLLECTION_ADDRESS_START_BLOCK ?? "0");
 
 // IERC165: ERC721Enumerable = 0x780e9d63
 const IFACE_ENUMERABLE = "0x780e9d63";
@@ -45,16 +45,16 @@ export default function DashboardPage() {
   const [isFullScan, setIsFullScan] = useState(false);
 
   const canQuery = useMemo(
-    () => Boolean(isConnected && pc && SPG && address),
+    () => Boolean(isConnected && pc && SPG_COLLECTION_ADDRESS && address),
     [isConnected, pc, address]
   );
 
   // ---------- Fast path: ERC721Enumerable ----------
   async function tryEnumerableRoute(): Promise<string[] | null> {
-    if (!pc || !SPG || !address) return null;
+    if (!pc || !SPG_COLLECTION_ADDRESS || !address) return null;
     try {
       const supports = (await pc.readContract({
-        address: SPG,
+        address: SPG_COLLECTION_ADDRESS,
         abi: [
           {
             type: "function",
@@ -71,7 +71,7 @@ export default function DashboardPage() {
       if (!supports) return null;
 
       const bal = (await pc.readContract({
-        address: SPG,
+        address: SPG_COLLECTION_ADDRESS,
         abi: erc721Abi,
         functionName: "balanceOf",
         args: [address as `0x${string}`],
@@ -82,7 +82,7 @@ export default function DashboardPage() {
       const tokenIds: string[] = [];
       for (let i = 0n; i < bal; i++) {
         const tid = (await pc.readContract({
-          address: SPG,
+          address: SPG_COLLECTION_ADDRESS,
           abi: [
             {
               type: "function",
@@ -109,7 +109,7 @@ export default function DashboardPage() {
 
   // ---------- Fallback: progressive log scan ----------
   async function fetchLogsProgressive(): Promise<string[]> {
-    if (!pc || !SPG || !address) return [];
+    if (!pc || !SPG_COLLECTION_ADDRESS || !address) return [];
     const latest = await pc.getBlockNumber();
 
     let range = 60_000n; // kecil → cepat tampil
@@ -120,7 +120,7 @@ export default function DashboardPage() {
     while (true) {
       const from = latest > range ? latest - range : 0n;
       const logs = await pc.getLogs({
-        address: SPG,
+        address: SPG_COLLECTION_ADDRESS,
         event: parseAbiItem(
           "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"
         ),
@@ -142,7 +142,7 @@ export default function DashboardPage() {
 
   // ---------- Optional: full history scan ----------
   async function fetchLogsFull(): Promise<string[]> {
-    if (!pc || !SPG || !address) return [];
+    if (!pc || !SPG_COLLECTION_ADDRESS || !address) return [];
     const latest = await pc.getBlockNumber();
     const step = 75_000n;
     const tokenIds = new Set<string>();
@@ -150,7 +150,7 @@ export default function DashboardPage() {
     for (let from = START_BLOCK; from <= latest; from += step) {
       const to = from + step - 1n > latest ? latest : from + step - 1n;
       const logs = await pc.getLogs({
-        address: SPG,
+        address: SPG_COLLECTION_ADDRESS,
         event: parseAbiItem(
           "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"
         ),
@@ -167,13 +167,13 @@ export default function DashboardPage() {
   }
 
   async function buildItems(tokenIds: string[]) {
-    if (!pc || !SPG) return [];
+    if (!pc || !SPG_COLLECTION_ADDRESS) return [];
     const results: Item[] = await Promise.all(
       tokenIds.map(async (id) => {
         let tokenURI: string | undefined;
         try {
           tokenURI = (await pc.readContract({
-            address: SPG,
+            address: SPG_COLLECTION_ADDRESS,
             abi: erc721Abi,
             functionName: "tokenURI",
             args: [BigInt(id)],
@@ -283,7 +283,7 @@ export default function DashboardPage() {
         <p className="text-sm opacity-70">
           Collection:{" "}
           <code className="opacity-90">
-            {SPG || "(set NEXT_PUBLIC_SPG_COLLECTION)"}
+            {SPG_COLLECTION_ADDRESS || "(set NEXT_PUBLIC_SPG_COLLECTION_ADDRESS_COLLECTION)"}
           </code>
         </p>
       </div>
@@ -291,12 +291,12 @@ export default function DashboardPage() {
       {!isConnected && (
         <div className="card">Connect wallet to see registered IP.</div>
       )}
-      {!SPG && (
+      {!SPG_COLLECTION_ADDRESS && (
         <div className="card">
-          Set <code>NEXT_PUBLIC_SPG_COLLECTION</code> di <code>.env.local</code>.
+          Set <code>NEXT_PUBLIC_SPG_COLLECTION_ADDRESS_COLLECTION</code> di <code>.env.local</code>.
         </div>
       )}
-      {isConnected && SPG && chainId !== AENEID_ID && (
+      {isConnected && SPG_COLLECTION_ADDRESS && chainId !== AENEID_ID && (
         <div className="card">
           You are not currently in the Aeneid. Click{" "}
           <button onClick={ensureAeneid} className="underline hover:opacity-80">
@@ -308,11 +308,11 @@ export default function DashboardPage() {
 
       {loading && <div className="card">Loading...</div>}
       {error && <div className="card text-red-400">{error}</div>}
-      {!loading && isConnected && SPG && items.length === 0 && (
+      {!loading && isConnected && SPG_COLLECTION_ADDRESS && items.length === 0 && (
         <div className="card">
           There are no registered IPs yet.
           <div className="mt-2 text-xs opacity-70">
-            Tip: set <code>NEXT_PUBLIC_SPG_START_BLOCK</code> to speed up the full scan.
+            Tip: set <code>NEXT_PUBLIC_SPG_COLLECTION_ADDRESS_START_BLOCK</code> to speed up the full scan.
           </div>
         </div>
       )}
