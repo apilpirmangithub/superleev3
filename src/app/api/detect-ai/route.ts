@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       if (debugMode) console.log("✅ SightEngine detection successful:", result, `(${Date.now() - startTime}ms)`);
       return NextResponse.json(result);
     } catch (sightEngineError) {
-      if (debugMode) console.log("⚠️ SightEngine not available, using simulation:", sightEngineError.message);
+      if (debugMode) console.log("⚠️ SightEngine not available, using simulation:", sightEngineError instanceof Error ? sightEngineError.message : String(sightEngineError));
 
       // Fallback to simulation
       if (debugMode) console.log("🎭 Starting simulation detection...");
@@ -185,3 +185,4 @@ async function detectWithHiveAI(imageBase64: string): Promise<{ isAI: boolean; c
   };
 }
 */
+
