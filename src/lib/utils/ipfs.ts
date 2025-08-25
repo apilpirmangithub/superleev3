@@ -49,7 +49,7 @@ export async function fetchJSON(input: RequestInfo | URL, init?: RequestInit) {
  */
 async function withRetry<T>(
   fn: () => Promise<T>,
-  maxRetries: number = 3,
+  maxRetries: number = 2,
   baseDelay: number = 1000
 ): Promise<T> {
   let lastError: Error;
