@@ -453,7 +453,7 @@ export default function IPGatekeeper({ onComplete, className = "" }: IPGatekeepe
                     </div>
                     <div>
                       <div className="text-4xl font-bold text-blue-500 mb-2">
-                        {(aiDetection.confidence * 100).toFixed(0)}%
+                        {((aiDetection.confidence || 0) * 100).toFixed(0)}%
                       </div>
                       <div className="text-sm text-gray-600">Confidence</div>
                     </div>
