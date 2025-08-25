@@ -33,7 +33,7 @@ export async function uploadToIPFS(data: Buffer | string, filename?: string): Pr
     } else {
       // Upload file data
       const formData = new FormData();
-      const file = new File([data], filename || 'file', { type: 'application/octet-stream' });
+      const file = new File([new Uint8Array(data)], filename || 'file', { type: 'application/octet-stream' });
       formData.append('file', file);
       
       const response = await fetch('/api/ipfs/file', {
@@ -154,3 +154,4 @@ export function truncateAddress(address: string, startChars: number = 6, endChar
 export function formatIPFSUrl(cid: string, gateway: string = 'https://ipfs.io'): string {
   return `${gateway}/ipfs/${cid}`;
 }
+
