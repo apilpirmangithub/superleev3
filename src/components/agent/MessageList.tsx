@@ -33,7 +33,7 @@ function TypingIndicator() {
         </div>
         <div className="flex-1">
           <div className="text-xs text-white/50 font-medium mb-1">
-            CHAT WITH SUPERLEE
+            SUPERLEE
           </div>
           <div className="bg-white/8 border border-white/10 rounded-2xl rounded-tl-md px-4 py-3 shadow-sm hover-glow transition-smooth">
             <div className="flex items-center gap-1">
@@ -107,7 +107,7 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
                   {/* Sender name (only for agent) */}
                   {!isUser && (
                     <div className="text-xs text-white/50 font-medium">
-                      CHAT WITH SUPERLEE
+                      SUPERLEE
                     </div>
                   )}
 
