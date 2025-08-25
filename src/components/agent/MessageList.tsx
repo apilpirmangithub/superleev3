@@ -110,7 +110,7 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
 
                   {/* Message bubble */}
                   <div className={`relative group ${
-                    isUser ? "ml-4" : "mr-4"
+                    isUser ? "ml-2 sm:ml-4" : "mr-2 sm:mr-4"
                   }`}>
                     <div className={`rounded-2xl px-4 py-3 shadow-sm transition-all duration-200 hover:shadow-md ${
                       isUser
