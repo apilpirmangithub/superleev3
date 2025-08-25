@@ -237,7 +237,7 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
 
             {/* Composer */}
             <Composer
-              onSubmit={(prompt) => chatAgent.processPrompt(prompt, fileUpload.file, aiDetectionResult)}
+              onSubmit={(prompt) => chatAgent.processPrompt(prompt, fileUpload.file || undefined, aiDetectionResult)}
               status={chatAgent.status}
               fileUpload={fileUpload}
             />
