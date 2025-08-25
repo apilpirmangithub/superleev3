@@ -3,36 +3,46 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+
   try {
     const { image } = await req.json();
-    
+
     if (!image) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
     }
 
+    console.log("🔍 AI Detection started:", new Date().toISOString());
+
     // Try SightEngine first, fallback to simulation
     try {
+      console.log("🎯 Attempting SightEngine detection...");
       const result = await detectWithSightEngine(image);
+      console.log("✅ SightEngine detection successful:", result, `(${Date.now() - startTime}ms)`);
       return NextResponse.json(result);
     } catch (sightEngineError) {
-      console.warn("SightEngine detection failed, using simulation:", sightEngineError);
-      
+      console.log("⚠️ SightEngine not available, using simulation:", sightEngineError.message);
+
       // Fallback to simulation
+      console.log("🎭 Starting simulation detection...");
       const buffer = Buffer.from(image, 'base64');
       const confidence = await simulateAIDetection(buffer);
-      const isAI = confidence > 0.7;
+      const isAI = confidence > 0.5; // Lower threshold for better demo experience
 
-      return NextResponse.json({
+      const result = {
         isAI,
         confidence: Math.round(confidence * 100) / 100,
         source: 'simulation'
-      });
+      };
+
+      console.log("✅ Simulation detection complete:", result, `(${Date.now() - startTime}ms)`);
+      return NextResponse.json(result);
     }
 
   } catch (error: any) {
-    console.error("AI detection error:", error);
+    console.error("❌ AI detection error:", error);
     return NextResponse.json(
-      { error: error?.message || "AI detection failed" }, 
+      { error: error?.message || "AI detection failed" },
       { status: 500 }
     );
   }
