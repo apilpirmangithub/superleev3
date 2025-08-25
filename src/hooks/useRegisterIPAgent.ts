@@ -1,209 +1,254 @@
-import { useState, useCallback } from "react";
-import { useAccount, useChainId, useSwitchChain } from "wagmi";
-import { createHash } from "crypto";
-import { useStoryClient } from "@/lib/storyClient";
-import { compressImage } from "@/lib/utils/image";
-import { uploadFile, uploadJSON, extractCid, toHttps, toIpfsUri } from "@/lib/utils/ipfs";
-import { sha256HexOfFile, keccakOfJson } from "@/lib/utils/crypto";
-import { createLicenseTerms, DEFAULT_LICENSE_SETTINGS, STORY_CONTRACTS } from "@/lib/license/terms";
-import { detectAI, fileToBuffer } from "@/services";
-import type { RegisterIntent } from "@/lib/agent/engine";
-import type { RegisterState } from "@/types/agents";
-import type { LicenseSettings } from "@/lib/license/terms";
+// License Terms Configuration for Story Protocol PIL (Programmable IP License)
 
-const SPG_COLLECTION = (process.env.NEXT_PUBLIC_SPG_COLLECTION as `0x${string}`) ||
-  STORY_CONTRACTS.SPG_COLLECTION;
+export interface LicenseTermsData {
+  terms: PILTerms;
+  licensingConfig: LicensingConfig;
+}
 
-export function useRegisterIPAgent() {
-  const { address } = useAccount();
-  const { getClient } = useStoryClient();
-  const chainId = useChainId();
-  const { switchChainAsync } = useSwitchChain();
+export interface PILTerms {
+  transferable: boolean;
+  royaltyPolicy: `0x${string}`;
+  defaultMintingFee: bigint;
+  expiration: bigint;
+  commercialUse: boolean;
+  commercialAttribution: boolean;
+  commercializerChecker: `0x${string}`;
+  commercializerCheckerData: `0x${string}`;
+  commercialRevCeiling: bigint;
+  commercialRevShare: number;
+  derivativesAllowed: boolean;
+  derivativesAttribution: boolean;
+  derivativesApproval: boolean;
+  derivativesReciprocal: boolean;
+  derivativeRevCeiling: bigint;
+  currency: `0x${string}`;
+  uri: string;
+}
 
-  const [registerState, setRegisterState] = useState<RegisterState>({
-    status: 'idle',
-    progress: 0,
-    error: null,
-  });
+export interface LicensingConfig {
+  isSet: boolean;
+  mintingFee: bigint;
+  licensingHook: `0x${string}`;
+  hookData: `0x${string}`;
+  commercialRevShare: number;
+  disabled: boolean;
+  expectMinimumGroupRewardShare: number;
+  expectGroupRewardPool: `0x${string}`;
+}
 
-  const ensureAeneid = useCallback(async () => {
-    if (chainId !== 1315) {
-      try {
-        await switchChainAsync({ chainId: 1315 });
-      } catch (error) {
-        throw new Error("Failed to switch to Aeneid network");
-      }
-    }
-  }, [chainId, switchChainAsync]);
+export type LicenseType = 'open_use' | 'non_commercial_remix' | 'commercial_use' | 'commercial_remix';
 
-  const executeRegister = useCallback(async (intent: RegisterIntent, file: File, licenseSettings?: LicenseSettings) => {
-    try {
-      // Ensure we're on the right network
-      await ensureAeneid();
+export interface LicenseSettings {
+  pilType: LicenseType;
+  commercialUse: boolean;
+  revShare: number;
+  derivativesAllowed: boolean;
+  derivativesAttribution: boolean;
+  attribution: boolean;
+  transferable: boolean;
+  aiLearning: boolean;
+  expiration: string;
+  territory: string;
+  licensePrice: number;
+}
 
-      // Reset state
-      setRegisterState({
-        status: 'compressing',
-        progress: 10,
-        error: null,
-      });
+// Story Protocol contract addresses for Aeneid testnet
+export const STORY_CONTRACTS = {
+  // Royalty policies
+  LAP_ROYALTY_POLICY: "0x0000000000000000000000000000000000000000" as `0x${string}`, // For non-commercial
+  ROYALTY_POLICY_LAP: "0xBe54FB168b3c982b7AaE60dB6CF75Bd8447b390E" as `0x${string}`, // For commercial
+  
+  // Currency contracts
+  STORY_USD: "0x1514000000000000000000000000000000000000" as `0x${string}`,
+  NULL_ADDRESS: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+  
+  // SPG NFT Collection
+  SPG_COLLECTION: "0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc" as `0x${string}`,
+};
 
-      // 1. Compress image
-      const compressedFile = await compressImage(file);
-
-      // 1.5. AI Detection (optional)
-      let aiDetection = null;
-      try {
-        const buffer = await fileToBuffer(compressedFile);
-        aiDetection = await detectAI(buffer);
-      } catch (error) {
-        console.warn('AI detection failed:', error);
-      }
-
-      setRegisterState(prev => ({
-        ...prev,
-        status: 'uploading-image',
-        progress: 25
-      }));
-
-      // 2. Upload image to IPFS
-      const imageUpload = await uploadFile(compressedFile);
-      const imageCid = extractCid(imageUpload.cid || imageUpload.url);
-      const imageGateway = toHttps(imageCid);
-      const imageHash = await sha256HexOfFile(compressedFile);
-
-      setRegisterState(prev => ({
-        ...prev,
-        status: 'creating-metadata',
-        progress: 50
-      }));
-
-      // 3. Create IP metadata with AI detection info
-      const ipMetadata = {
-        title: intent.title || compressedFile.name,
-        description: intent.prompt || "",
-        image: imageGateway,
-        imageHash,
-        mediaUrl: imageGateway,
-        mediaHash: imageHash,
-        mediaType: compressedFile.type || "image/webp",
-        creators: address
-          ? [{ name: address, address, contributionPercent: 100 }]
-          : [],
-        aiMetadata: intent.prompt
-          ? { prompt: intent.prompt, generator: "user", model: "rule-based" }
-          : undefined,
-        ...(aiDetection?.isAI && {
-          tags: ["AI-generated"],
-          aiGenerated: true,
-          aiConfidence: aiDetection.confidence,
-        }),
-      };
-
-      // 4. Upload IP metadata to IPFS
-      const ipMetaUpload = await uploadJSON(ipMetadata);
-      const ipMetaCid = extractCid(ipMetaUpload.cid || ipMetaUpload.url);
-      const ipMetadataURI = toIpfsUri(ipMetaCid);
-      const ipMetadataHash = await keccakOfJson(ipMetadata);
-
-      setRegisterState(prev => ({
-        ...prev,
-        status: 'uploading-metadata',
-        progress: 60
-      }));
-
-      // 5. Create NFT metadata with license info
-      const usedLicenseSettings = licenseSettings || DEFAULT_LICENSE_SETTINGS;
-      const nftMetadata = {
-        name: `IP Ownership — ${ipMetadata.title}`,
-        description: "Ownership NFT for IP Asset",
-        image: imageGateway,
-        ipMetadataURI,
-        attributes: [
-          { trait_type: "ip_metadata_uri", value: ipMetadataURI },
-          { trait_type: "Type", value: aiDetection?.isAI ? "AI-generated" : "Original" },
-          { trait_type: "License Type", value: usedLicenseSettings.pilType },
-          { trait_type: "Commercial Use", value: usedLicenseSettings.commercialUse ? "Yes" : "No" },
-          { trait_type: "AI Learning Allowed", value: usedLicenseSettings.aiLearning ? "Yes" : "No" },
-          ...(usedLicenseSettings.commercialUse ? [{ trait_type: "Revenue Share", value: `${usedLicenseSettings.revShare}%` }] : []),
-          { trait_type: "Territory", value: usedLicenseSettings.territory },
-        ],
-      };
-
-      // 6. Upload NFT metadata to IPFS
-      const nftMetaUpload = await uploadJSON(nftMetadata);
-      const nftMetaCid = extractCid(nftMetaUpload.cid || nftMetaUpload.url);
-      const nftMetadataURI = toIpfsUri(nftMetaCid);
-      const nftMetadataHash = await keccakOfJson(nftMetadata);
-
-      setRegisterState(prev => ({
-        ...prev,
-        status: 'minting',
-        progress: 75
-      }));
-
-      // 7. Mint and register IP on Story Protocol with license terms
-      const client = await getClient();
-      const licenseTermsData = createLicenseTerms(usedLicenseSettings);
-
-      const result = await client.ipAsset.mintAndRegisterIpAssetWithPilTerms({
-        spgNftContract: SPG_COLLECTION,
-        recipient: address as `0x${string}`,
-        licenseTermsData: [licenseTermsData],
-        ipMetadata: {
-          ipMetadataURI,
-          ipMetadataHash,
-          nftMetadataURI,
-          nftMetadataHash,
-        },
-        allowDuplicates: true,
-      });
-
-      setRegisterState({
-        status: 'success',
-        progress: 100,
-        error: null,
-        ipId: result.ipId,
-        txHash: result.txHash,
-      });
-
-      return {
-        success: true,
-        ipId: result.ipId,
-        txHash: result.txHash,
-        imageUrl: imageGateway,
-        ipMetadataUrl: toHttps(ipMetaCid),
-        nftMetadataUrl: toHttps(nftMetaCid),
-        licenseType: usedLicenseSettings.pilType,
-        aiDetected: aiDetection?.isAI || false,
-        aiConfidence: aiDetection?.confidence || 0,
-      };
-
-    } catch (error: any) {
-      setRegisterState(prev => ({
-        ...prev,
-        status: 'error',
-        error
-      }));
-
-      return {
-        success: false,
-        error: error?.message || String(error)
-      };
-    }
-  }, [address, getClient, ensureAeneid]);
-
-  const resetRegister = useCallback(() => {
-    setRegisterState({
-      status: 'idle',
-      progress: 0,
-      error: null,
-    });
-  }, []);
-
-  return {
-    registerState,
-    executeRegister,
-    resetRegister,
+export function createLicenseTerms(settings: LicenseSettings): LicenseTermsData {
+  const baseTerms: PILTerms = {
+    transferable: settings.transferable,
+    defaultMintingFee: BigInt(settings.licensePrice * 1e18), // Convert to wei
+    expiration: BigInt(settings.expiration || 0),
+    commercialRevCeiling: BigInt(0),
+    derivativeRevCeiling: BigInt(0),
+    uri: "",
+    commercialUse: false,
+    commercialAttribution: false,
+    commercialRevShare: 0,
+    derivativesAllowed: false,
+    derivativesAttribution: false,
+    derivativesApproval: false,
+    derivativesReciprocal: false,
+    royaltyPolicy: STORY_CONTRACTS.NULL_ADDRESS,
+    commercializerChecker: STORY_CONTRACTS.NULL_ADDRESS,
+    commercializerCheckerData: "0x" as `0x${string}`,
+    currency: STORY_CONTRACTS.NULL_ADDRESS,
   };
+
+  const baseLicensingConfig: LicensingConfig = {
+    isSet: false,
+    mintingFee: BigInt(settings.licensePrice * 1e18),
+    licensingHook: STORY_CONTRACTS.NULL_ADDRESS,
+    hookData: "0x" as `0x${string}`,
+    commercialRevShare: settings.revShare,
+    disabled: false,
+    expectMinimumGroupRewardShare: 0,
+    expectGroupRewardPool: STORY_CONTRACTS.NULL_ADDRESS,
+  };
+
+  switch (settings.pilType) {
+    case 'open_use':
+      return {
+        terms: {
+          ...baseTerms,
+          royaltyPolicy: STORY_CONTRACTS.LAP_ROYALTY_POLICY,
+          commercializerChecker: STORY_CONTRACTS.NULL_ADDRESS,
+          commercializerCheckerData: "0x" as `0x${string}`,
+          currency: STORY_CONTRACTS.NULL_ADDRESS,
+          commercialUse: false,
+          derivativesAllowed: true,
+          derivativesAttribution: false,
+          derivativesReciprocal: false,
+        },
+        licensingConfig: {
+          ...baseLicensingConfig,
+          mintingFee: BigInt(0), // Free for open use
+        }
+      };
+    
+    case 'non_commercial_remix':
+      return {
+        terms: {
+          ...baseTerms,
+          royaltyPolicy: STORY_CONTRACTS.LAP_ROYALTY_POLICY,
+          commercializerChecker: STORY_CONTRACTS.NULL_ADDRESS,
+          commercializerCheckerData: "0x" as `0x${string}`,
+          currency: STORY_CONTRACTS.NULL_ADDRESS,
+          commercialUse: false,
+          derivativesAllowed: true,
+          derivativesAttribution: true,
+          derivativesReciprocal: true,
+        },
+        licensingConfig: {
+          ...baseLicensingConfig,
+          mintingFee: BigInt(0), // Free for non-commercial
+        }
+      };
+    
+    case 'commercial_use':
+      return {
+        terms: {
+          ...baseTerms,
+          royaltyPolicy: STORY_CONTRACTS.ROYALTY_POLICY_LAP,
+          commercializerChecker: STORY_CONTRACTS.NULL_ADDRESS,
+          commercializerCheckerData: "0x" as `0x${string}`,
+          currency: STORY_CONTRACTS.STORY_USD,
+          defaultMintingFee: BigInt(settings.licensePrice * 1e18),
+          commercialUse: true,
+          commercialAttribution: true,
+          commercialRevShare: 0, // No revenue sharing for derivatives
+          derivativesAllowed: false,
+        },
+        licensingConfig: baseLicensingConfig
+      };
+    
+    case 'commercial_remix':
+      return {
+        terms: {
+          ...baseTerms,
+          royaltyPolicy: STORY_CONTRACTS.ROYALTY_POLICY_LAP,
+          commercializerChecker: STORY_CONTRACTS.NULL_ADDRESS,
+          commercializerCheckerData: "0x" as `0x${string}`,
+          currency: STORY_CONTRACTS.STORY_USD,
+          defaultMintingFee: BigInt(settings.licensePrice * 1e18),
+          commercialUse: true,
+          commercialAttribution: true,
+          commercialRevShare: settings.revShare,
+          derivativesAllowed: true,
+          derivativesAttribution: true,
+          derivativesReciprocal: true,
+        },
+        licensingConfig: baseLicensingConfig
+      };
+    
+    default:
+      return {
+        terms: {
+          ...baseTerms,
+          royaltyPolicy: STORY_CONTRACTS.LAP_ROYALTY_POLICY,
+        },
+        licensingConfig: baseLicensingConfig
+      };
+  }
+}
+
+// Default license settings
+export const DEFAULT_LICENSE_SETTINGS: LicenseSettings = {
+  pilType: 'non_commercial_remix',
+  commercialUse: false,
+  revShare: 0,
+  derivativesAllowed: true,
+  derivativesAttribution: true,
+  attribution: false,
+  transferable: true,
+  aiLearning: true,
+  expiration: '0',
+  territory: 'Global',
+  licensePrice: 0,
+};
+
+// License type descriptions
+export const LICENSE_DESCRIPTIONS = {
+  open_use: {
+    title: 'Open Use',
+    description: 'Free for any non-commercial use, derivatives allowed',
+    icon: '🎁',
+    features: ['Non-commercial use', 'Derivatives allowed', 'No attribution required', 'Free license']
+  },
+  non_commercial_remix: {
+    title: 'Non-Commercial Remix',
+    description: 'Allow remixing and derivatives, but no commercial use',
+    icon: '🔄',
+    features: ['Non-commercial use', 'Derivatives allowed', 'Attribution required', 'Share-alike derivatives']
+  },
+  commercial_use: {
+    title: 'Commercial Use',
+    description: 'Allow commercial use, but no derivatives',
+    icon: '💼',
+    features: ['Commercial use allowed', 'No derivatives', 'Attribution required', 'Revenue to creator']
+  },
+  commercial_remix: {
+    title: 'Commercial Remix',
+    description: 'Full commercial rights with revenue sharing on derivatives',
+    icon: '🎨',
+    features: ['Commercial use allowed', 'Derivatives allowed', 'Revenue sharing', 'Attribution required']
+  }
+} as const;
+
+// Utility functions
+export function formatLicensePrice(price: number): string {
+  if (price === 0) return 'Free';
+  return `${price} $IP`;
+}
+
+export function getLicenseDisplayName(pilType: LicenseType): string {
+  return LICENSE_DESCRIPTIONS[pilType].title;
+}
+
+export function getLicenseFeatures(pilType: LicenseType): readonly string[] {
+  return LICENSE_DESCRIPTIONS[pilType].features;
+}
+
+export function isCommercialLicense(pilType: LicenseType): boolean {
+  return pilType === 'commercial_use' || pilType === 'commercial_remix';
+}
+
+export function allowsDerivatives(pilType: LicenseType): boolean {
+  return pilType !== 'commercial_use';
+}
+
+export function requiresAttribution(pilType: LicenseType): boolean {
+  return pilType !== 'open_use';
 }
