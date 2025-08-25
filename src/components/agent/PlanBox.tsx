@@ -1,13 +1,20 @@
 import React from "react";
 import { Check, X } from "lucide-react";
-import type { Plan, SwapState, RegisterState } from "@/types/agents";
+import type { Plan, SwapState } from "@/types/agents";
+
+interface SimpleRegisterState {
+  status: 'idle' | 'processing' | 'success' | 'error';
+  step: string;
+  progress: number;
+  error: string | null;
+}
 
 interface PlanBoxProps {
   plan: Plan;
   onConfirm: () => void;
   onCancel: () => void;
   swapState?: SwapState;
-  registerState?: RegisterState;
+  registerState?: SimpleRegisterState;
 }
 
 export function PlanBox({ plan, onConfirm, onCancel, swapState, registerState }: PlanBoxProps) {
