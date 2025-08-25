@@ -77,13 +77,35 @@ async function withRetry<T>(
  * Upload file to IPFS via API route with retry mechanism
  */
 export async function uploadFile(file: File) {
+  if (!file) {
+    throw new Error("No file provided for upload");
+  }
+
   return withRetry(async () => {
+    // Create fresh FormData for each attempt to avoid "body stream already read" error
     const fd = new FormData();
     fd.append("file", file, file.name);
-    return await fetchJSON("/api/ipfs/file", {
+
+    const response = await fetch("/api/ipfs/file", {
       method: "POST",
       body: fd,
     });
+
+    // Clone response to avoid "body stream already read" error on retry
+    const responseClone = response.clone();
+    const text = await responseClone.text();
+
+    if (!response.ok) {
+      throw new Error(
+        `HTTP ${response.status}${response.statusText ? " " + response.statusText : ""}: ${text.slice(0, 200)}`
+      );
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(`Server returned non-JSON: ${text.slice(0, 200)}`);
+    }
   });
 }
 
