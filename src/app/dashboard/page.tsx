@@ -9,6 +9,7 @@ import {
   useSwitchChain,
 } from "wagmi";
 import { erc721Abi, parseAbiItem } from "viem";
+import { SPG_COLLECTION_ADDRESS } from "@/lib/constants";
 
 type Item = {
   tokenId: string;
@@ -18,7 +19,6 @@ type Item = {
 };
 
 const AENEID_ID = 1315;
-const SPG = process.env.NEXT_PUBLIC_SPG_COLLECTION as `0x${string}` | undefined;
 const START_BLOCK = BigInt(process.env.NEXT_PUBLIC_SPG_START_BLOCK ?? "0");
 
 // IERC165: ERC721Enumerable = 0x780e9d63
