@@ -89,6 +89,27 @@ export function Composer({
     }
   }, [messages, isConnected, isTyping]);
 
+  // Preserve focus when user has typed something
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      // If user has text typed and clicks outside input, refocus after a short delay
+      if (prompt.trim() && textareaRef.current && isConnected && !isTyping) {
+        const target = e.target as Element;
+        // Don't refocus if clicking on buttons or interactive elements
+        if (!target.closest('button, a, input, select')) {
+          setTimeout(() => {
+            if (textareaRef.current && prompt.trim()) {
+              textareaRef.current.focus();
+            }
+          }, 100);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleDocumentClick);
+    return () => document.removeEventListener('click', handleDocumentClick);
+  }, [prompt, isConnected, isTyping]);
+
   const handleSubmit = () => {
     const trimmedPrompt = prompt.trim();
     if ((!trimmedPrompt && !file) || !isConnected || isTyping) return;
