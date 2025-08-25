@@ -2,11 +2,16 @@
 
 import React, { useState } from "react";
 import { Check, Info } from "lucide-react";
-import { 
-  LICENSE_DESCRIPTIONS, 
+import {
+  LICENSE_DESCRIPTIONS,
   DEFAULT_LICENSE_SETTINGS,
-  type LicenseType, 
-  type LicenseSettings 
+  hasCommercialUse,
+  hasDerivativesAllowed,
+  hasAttributionRequired,
+  hasRevenueSharing,
+  hasFreeLicense,
+  type LicenseType,
+  type LicenseSettings
 } from "@/lib/license/terms";
 
 interface LicenseSelectorProps {
@@ -96,11 +101,11 @@ export function LicenseSelector({ selectedLicense = DEFAULT_LICENSE_SETTINGS, on
                 <div className="absolute top-full left-0 right-0 mt-2 p-4 rounded-xl border border-white/10 bg-black/80 backdrop-blur-sm z-10 text-sm">
                   <h4 className="font-medium mb-2 text-white">Detail Lisensi:</h4>
                   <ul className="space-y-1 text-white/70">
-                    <li>• <strong>Penggunaan Komersial:</strong> {LICENSE_DESCRIPTIONS[licenseType].features.includes('Commercial use allowed') ? 'Diizinkan' : 'Tidak diizinkan'}</li>
-                    <li>• <strong>Karya Turunan:</strong> {LICENSE_DESCRIPTIONS[licenseType].features.includes('Derivatives allowed') ? 'Diizinkan' : 'Tidak diizinkan'}</li>
-                    <li>• <strong>Atribusi:</strong> {LICENSE_DESCRIPTIONS[licenseType].features.includes('Attribution required') ? 'Diperlukan' : 'Tidak diperlukan'}</li>
-                    <li>• <strong>Berbagi Pendapatan:</strong> {LICENSE_DESCRIPTIONS[licenseType].features.includes('Revenue sharing') ? 'Ya' : 'Tidak'}</li>
-                    <li>• <strong>Biaya:</strong> {LICENSE_DESCRIPTIONS[licenseType].features.includes('Free license') ? 'Gratis' : 'Berbayar'}</li>
+                    <li>• <strong>Penggunaan Komersial:</strong> {hasCommercialUse(licenseType) ? 'Diizinkan' : 'Tidak diizinkan'}</li>
+                    <li>• <strong>Karya Turunan:</strong> {hasDerivativesAllowed(licenseType) ? 'Diizinkan' : 'Tidak diizinkan'}</li>
+                    <li>• <strong>Atribusi:</strong> {hasAttributionRequired(licenseType) ? 'Diperlukan' : 'Tidak diperlukan'}</li>
+                    <li>• <strong>Berbagi Pendapatan:</strong> {hasRevenueSharing(licenseType) ? 'Ya' : 'Tidak'}</li>
+                    <li>• <strong>Biaya:</strong> {hasFreeLicense(licenseType) ? 'Gratis' : 'Berbayar'}</li>
                   </ul>
                 </div>
               )}
