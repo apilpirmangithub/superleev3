@@ -15,10 +15,9 @@ export async function keccakOfJson(obj: any): Promise<`0x${string}`> {
 }
 
 /**
- * Calculate SHA-256 hash of a file
+ * Calculate Keccak256 hash of a file (consistent with Story Protocol)
  */
-export async function sha256HexOfFile(file: File): Promise<`0x${string}`> {
+export async function keccakOfFile(file: File): Promise<`0x${string}`> {
   const buf = await file.arrayBuffer();
-  const hash = await crypto.subtle.digest("SHA-256", buf);
-  return toHex(new Uint8Array(hash), { size: 32 });
+  return bytesKeccak(new Uint8Array(buf));
 }

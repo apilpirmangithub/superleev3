@@ -3,9 +3,9 @@ import { useAccount, useChainId, useSwitchChain } from "wagmi";
 import { useStoryClient } from "@/lib/storyClient";
 import { compressImage } from "@/lib/utils/image";
 import { uploadFile, uploadJSON, extractCid, toHttps, toIpfsUri } from "@/lib/utils/ipfs";
-import { sha256HexOfFile, keccakOfJson } from "@/lib/utils/crypto";
+import { keccakOfFile, keccakOfJson } from "@/lib/utils/crypto";
 import type { RegisterIntent } from "@/lib/agent/engine";
-import type { RegisterState } from "@/types/agents";
+import type { RegisterState, AgentError } from "@/types/agents";
 
 const SPG_COLLECTION = (process.env.NEXT_PUBLIC_SPG_COLLECTION as `0x${string}`) ||
   "0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc";
@@ -57,7 +57,7 @@ export function useRegisterIPAgent() {
       const imageUpload = await uploadFile(compressedFile);
       const imageCid = extractCid(imageUpload.cid || imageUpload.url);
       const imageGateway = toHttps(imageCid);
-      const imageHash = await sha256HexOfFile(compressedFile);
+      const imageHash = await keccakOfFile(compressedFile);
 
       setRegisterState(prev => ({
         ...prev,
@@ -147,15 +147,21 @@ export function useRegisterIPAgent() {
       };
 
     } catch (error: any) {
+      const agentError: AgentError = {
+        message: error.message || String(error),
+        code: error.code,
+        details: error.details || { originalError: error }
+      };
+
       setRegisterState(prev => ({
         ...prev,
         status: 'error',
-        error
+        error: agentError
       }));
 
       return {
         success: false,
-        error: error?.message || String(error)
+        error: agentError.message
       };
     }
   }, [address, getClient, ensureAeneid]);

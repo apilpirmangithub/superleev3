@@ -15,10 +15,15 @@ const nextConfig = {
       'react-native': false,    // kalau tidak dipakai
       '@metamask/sdk': false,   // jika tidak pakai MetaMask SDK langsung (cukup injected)
     };
+
     config.resolve.fallback = {
       ...(config.resolve.fallback || {}),
       encoding: false,          // hilangkan warning "encoding"
+      fs: false,
+      net: false,
+      tls: false,
     };
+
     return config;
   },
 };

@@ -10,7 +10,10 @@ import { useEffect, useState } from "react";
 
 function RKTheme({ children }: { children: React.ReactNode }) {
   const [isDark, setIsDark] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
+    setMounted(true);
     const root = document.documentElement;
     const dark = root.classList.contains("dark");
     setIsDark(dark);
@@ -20,6 +23,11 @@ function RKTheme({ children }: { children: React.ReactNode }) {
     obs.observe(root, { attributes: true, attributeFilter: ["class"] });
     return () => obs.disconnect();
   }, []);
+
+  // Prevent SSR hydration mismatch
+  if (!mounted) {
+    return <div>{children}</div>;
+  }
 
   return (
     <RainbowKitProvider

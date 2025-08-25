@@ -25,31 +25,32 @@ export function toIpfsUri(cidOrUrl?: string) {
 }
 
 /**
- * Enhanced fetch with JSON parsing and error handling
+ * Simple fetch with JSON parsing and error handling (no retry)
  */
 export async function fetchJSON(input: RequestInfo | URL, init?: RequestInit) {
-  const r = await fetch(input, init);
-  const t = await r.text();
-  if (!r.ok)
-    throw new Error(
-      `HTTP ${r.status}${r.statusText ? " " + r.statusText : ""}: ${t.slice(
-        0,
-        200
-      )}`
-    );
-  try {
-    return JSON.parse(t);
-  } catch {
-    throw new Error(`Server returned non-JSON: ${t.slice(0, 200)}`);
+  const response = await fetch(input, init);
+
+  if (!response.ok) {
+    // Clone response untuk error handling
+    const errorText = await response.clone().text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
   }
+
+  // Langsung parse JSON tanpa text() dulu
+  return await response.json();
 }
 
 /**
- * Upload file to IPFS via API route
+ * Upload file to IPFS via API route (no retry mechanism)
  */
 export async function uploadFile(file: File) {
+  if (!file) {
+    throw new Error("No file provided for upload");
+  }
+
   const fd = new FormData();
   fd.append("file", file, file.name);
+
   return await fetchJSON("/api/ipfs/file", {
     method: "POST",
     body: fd,
@@ -57,9 +58,13 @@ export async function uploadFile(file: File) {
 }
 
 /**
- * Upload JSON to IPFS via API route
+ * Upload JSON to IPFS via API route (no retry mechanism)
  */
 export async function uploadJSON(obj: any) {
+  if (!obj) {
+    throw new Error("No object provided for upload");
+  }
+
   return await fetchJSON("/api/ipfs/json", {
     method: "POST",
     headers: { "content-type": "application/json" },
