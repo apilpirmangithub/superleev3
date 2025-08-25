@@ -128,6 +128,20 @@ export function useRegisterIPAgent() {
       console.log('📝 NFT Metadata URI:', nftMetadataURI);
       console.log('🔐 NFT Metadata Hash:', nftMetadataHash);
 
+      // Validate metadata before contract call
+      if (!ipMetadataURI.startsWith('ipfs://')) {
+        throw new Error('Invalid IP metadata URI format');
+      }
+      if (!nftMetadataURI.startsWith('ipfs://')) {
+        throw new Error('Invalid NFT metadata URI format');
+      }
+      if (!ipMetadataHash.startsWith('0x') || ipMetadataHash.length !== 66) {
+        throw new Error('Invalid IP metadata hash format');
+      }
+      if (!nftMetadataHash.startsWith('0x') || nftMetadataHash.length !== 66) {
+        throw new Error('Invalid NFT metadata hash format');
+      }
+
       const client = await getClient();
 
       try {
