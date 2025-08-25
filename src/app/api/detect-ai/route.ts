@@ -4,6 +4,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
+  const debugMode = process.env.AI_DETECTION_DEBUG === 'true';
 
   try {
     const { image } = await req.json();
@@ -12,7 +13,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
     }
 
-    console.log("🔍 AI Detection started:", new Date().toISOString());
+    if (debugMode) {
+      console.log("🔍 AI Detection started:", new Date().toISOString());
+    }
 
     // Try SightEngine first, fallback to simulation
     try {
