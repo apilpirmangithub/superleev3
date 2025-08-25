@@ -87,17 +87,11 @@ export function EnhancedAgentOrchestrator() {
 Note: AI-generated images cannot be licensed for AI training purposes - it doesn't make sense to train AI with AI-generated content again!`
         : `Analysis complete! Your image appears to be real/human-made with ${((result.confidence || 0) * 100).toFixed(1)}% confidence.`;
 
-      // Update the loading message to remove animation and show results
-      if (loadingMessageIndex !== null) {
-        chatAgent.messages[loadingMessageIndex] = {
-          ...chatAgent.messages[loadingMessageIndex],
-          text: detectionText,
-          isLoading: false
-        };
-        setLoadingMessageIndex(null);
-      } else {
-        chatAgent.addMessage("agent", detectionText);
-      }
+      // Update the loading message to show results
+      chatAgent.updateLastMessage({
+        text: detectionText,
+        isLoading: false
+      });
 
       // Process the AI detection result with Superlee engine
       chatAgent.processPrompt("AI analysis completed", currentFile, result);
