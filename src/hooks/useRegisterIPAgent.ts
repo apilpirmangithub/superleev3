@@ -207,7 +207,3 @@ export function useRegisterIPAgent() {
     resetRegister,
   };
 }
-
-export function requiresAttribution(pilType: LicenseType): boolean {
-  return pilType !== 'open_use';
-}
