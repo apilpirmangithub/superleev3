@@ -207,3 +207,5 @@ export function useRegisterIPAgent() {
     resetRegister,
   };
 }
+
+export { useRegisterIPAgent };
