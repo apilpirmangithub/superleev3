@@ -215,8 +215,8 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
                   <span className="text-lg font-bold text-white">S</span>
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-white">SUPERLEE ASSISTANT</div>
-                  <div className="text-xs text-white/60">AI-powered blockchain assistant</div>
+                  <div className="text-sm font-semibold text-white">Chat with Superlee</div>
+                  <div className="text-xs text-white/60">Your friendly neighborhood blockchain wizard 🧙‍♂️✨</div>
                 </div>
               </div>
 
