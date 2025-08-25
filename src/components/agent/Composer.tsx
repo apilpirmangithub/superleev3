@@ -116,7 +116,7 @@ export function Composer({
             {/* Attachment Button */}
             <button
               onClick={handleFileClick}
-              className="p-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-colors shrink-0"
+              className="p-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-smooth hover-lift shrink-0"
               title="Attach image"
             >
               <Paperclip className="h-5 w-5" />
@@ -150,7 +150,7 @@ export function Composer({
             <div className="relative">
               <button
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="p-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-colors shrink-0"
+                className="p-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-smooth hover-lift shrink-0"
                 title="Add emoji"
               >
                 <Smile className="h-5 w-5" />
@@ -158,13 +158,13 @@ export function Composer({
 
               {/* Emoji Picker */}
               {showEmojiPicker && (
-                <div className="absolute bottom-full right-0 mb-2 p-3 bg-white/10 backdrop-blur-md border border-white/15 rounded-xl shadow-xl z-50">
+                <div className="absolute bottom-full right-0 mb-2 p-3 bg-white/10 backdrop-blur-md border border-white/15 rounded-xl shadow-xl z-50 animate-scale-in">
                   <div className="grid grid-cols-4 gap-2">
                     {EMOJI_SUGGESTIONS.map((emoji) => (
                       <button
                         key={emoji}
                         onClick={() => addEmoji(emoji)}
-                        className="p-2 rounded-lg hover:bg-white/10 text-lg transition-colors"
+                        className="p-2 rounded-lg hover:bg-white/10 text-lg transition-bounce hover:scale-125"
                       >
                         {emoji}
                       </button>
