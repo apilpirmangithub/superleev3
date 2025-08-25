@@ -27,7 +27,6 @@ export function EnhancedAgentOrchestrator() {
   const [aiDetectionResult, setAiDetectionResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzedFile, setAnalyzedFile] = useState<File | null>(null);
-  const [loadingMessageIndex, setLoadingMessageIndex] = useState<number | null>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   
   const explorerBase = storyAeneid.blockExplorers?.default.url || "https://aeneid.storyscan.xyz";
