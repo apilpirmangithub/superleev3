@@ -4,11 +4,9 @@ import { useStoryClient } from "@/lib/storyClient";
 import { compressImage } from "@/lib/utils/image";
 import { uploadFile, uploadJSON, extractCid, toHttps, toIpfsUri } from "@/lib/utils/ipfs";
 import { sha256HexOfFile, keccakOfJson } from "@/lib/utils/crypto";
+import { SPG_COLLECTION_ADDRESS } from "@/lib/constants";
 import type { RegisterIntent } from "@/lib/agent/engine";
 import type { RegisterState } from "@/types/agents";
-
-const SPG_COLLECTION = (process.env.NEXT_PUBLIC_SPG_COLLECTION as `0x${string}`) ||
-  "0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc";
 
 export function useRegisterIPAgent() {
   const { address } = useAccount();
@@ -118,7 +116,7 @@ export function useRegisterIPAgent() {
       // 7. Mint and register IP on Story Protocol
       const client = await getClient();
       const result = await client.ipAsset.mintAndRegisterIp({
-        spgNftContract: SPG_COLLECTION,
+        spgNftContract: SPG_COLLECTION_ADDRESS,
         recipient: address as `0x${string}`,
         ipMetadata: {
           ipMetadataURI,
