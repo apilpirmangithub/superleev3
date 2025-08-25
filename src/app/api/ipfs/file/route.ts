@@ -18,17 +18,9 @@ export async function POST(req: NextRequest) {
     });
 
     const formData = await req.formData();
+    const file = formData.get("file") as File;
 
-    // Use iteration to find the file instead of .get() method
-    let file: File | null = null;
-    for (const [key, value] of formData.entries()) {
-      if (key === "file" && value instanceof File) {
-        file = value;
-        break;
-      }
-    }
-
-    if (!file) {
+    if (!file || !(file instanceof File)) {
       return NextResponse.json({ error: "No valid file provided" }, { status: 400 });
     }
 
