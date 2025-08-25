@@ -166,7 +166,6 @@ NFT Metadata: ${result.nftMetadataUrl}
           <Composer
             onSubmit={chatAgent.processPrompt}
             status={chatAgent.status}
-            fileUpload={fileUpload}
           />
         </section>
       </div>
