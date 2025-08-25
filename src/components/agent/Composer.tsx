@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import Image from "next/image";
 import { useAccount } from "wagmi";
-import { Send, Paperclip, X, Image as ImageIcon, Smile } from "lucide-react";
+import { Send, X, Image as ImageIcon, Smile } from "lucide-react";
 
 interface ComposerProps {
   onSubmit: (prompt: string) => void;
@@ -28,7 +28,6 @@ export function Composer({
   const [prompt, setPrompt] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAutoGrow = (element: HTMLTextAreaElement) => {
     element.style.height = "auto";
@@ -55,18 +54,6 @@ export function Composer({
     }
   };
 
-  const handleFileClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile && onFileSelect) {
-      onFileSelect(selectedFile);
-    }
-    // Reset input value to allow re-selecting the same file
-    e.target.value = '';
-  };
 
   const addEmoji = (emoji: string) => {
     setPrompt(prev => prev + emoji);
@@ -113,14 +100,6 @@ export function Composer({
         <div className="relative">
           <div className="flex items-end gap-2 rounded-2xl ring-1 ring-white/15 bg-white/8 backdrop-blur-md px-3 py-2 overflow-visible transition-smooth hover:ring-white/25 focus-within:ring-sky-400/50 focus-within:ring-2 hover-glow">
 
-            {/* Attachment Button */}
-            <button
-              onClick={handleFileClick}
-              className="p-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-smooth hover-lift shrink-0"
-              title="Attach image"
-            >
-              <Paperclip className="h-5 w-5" />
-            </button>
 
             {/* Textarea */}
             <textarea
@@ -207,14 +186,6 @@ export function Composer({
             />
           </div>
 
-          {/* File input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="hidden"
-          />
 
           {/* Status and shortcuts */}
           <div className="mt-2 flex items-center justify-between">
