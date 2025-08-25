@@ -3,6 +3,7 @@ import { useStoryClient } from "@/lib/storyClient";
 import { useAccount } from "wagmi";
 import { toHex } from "viem";
 import { useState } from "react";
+import { SPG_COLLECTION_ADDRESS } from "@/lib/constants";
 
 async function sha256Hex(file: File): Promise<`0x${string}`> {
   const buf = await file.arrayBuffer();
@@ -63,7 +64,7 @@ export default function RegisterIPPanel() {
       setStatus("Registering on Story...");
       const client = await getClient();
       const res = await client.ipAsset.mintAndRegisterIp({
-        spgNftContract: "0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc",
+        spgNftContract: SPG_COLLECTION_ADDRESS,
         ipMetadata: {
           ipMetadataURI: ipMetaUpload.url,
           ipMetadataHash: ipMetaUpload.hash,
