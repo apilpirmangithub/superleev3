@@ -144,7 +144,7 @@ Image: ${result.imageUrl}
 IP Metadata: ${result.ipMetadataUrl}
 NFT Metadata: ${result.nftMetadataUrl}
 License Type: ${result.licenseType}
-AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${(result.aiConfidence * 100).toFixed(1)}%)
+AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) * 100).toFixed(1)}%)
 ↗ View: ${explorerBase}/tx/${result.txHash}`;
             
             chatAgent.addMessage("agent", successMessage);
