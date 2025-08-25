@@ -37,16 +37,7 @@ const nextConfig = {
       ];
     }
 
-    // Add environment variable for WalletConnect
-    config.plugins = config.plugins || [];
-
-    // Import webpack to use DefinePlugin
-    const webpack = require('webpack');
-    config.plugins.push(
-      new webpack.DefinePlugin({
-        'process.env.WC_DISABLE_INTERNAL_STORAGE': JSON.stringify('true'),
-      })
-    );
+    // No additional plugins needed for now
 
     return config;
   },
