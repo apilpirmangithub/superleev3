@@ -150,12 +150,12 @@ export function useRegisterIPAgent() {
       setRegisterState(prev => ({
         ...prev,
         status: 'error',
-        error
+        error: error.message || String(error)
       }));
 
       return {
         success: false,
-        error: error?.message || String(error)
+        error: error.message || String(error)
       };
     }
   }, [address, getClient, ensureAeneid]);
