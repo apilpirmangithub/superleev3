@@ -79,7 +79,13 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
           (index < messages.length - 1 && messages[index + 1].ts - message.ts > 300000); // 5 min gap
 
         return (
-          <div key={index}>
+          <div
+            key={index}
+            className={`message-enter ${index === messages.length - 1 ? 'animate-slide-up' : ''}`}
+            style={{
+              animationDelay: index === messages.length - 1 ? '0ms' : `${index * 100}ms`
+            }}
+          >
             <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
               <div className={`flex items-start gap-2 sm:gap-3 max-w-[90%] sm:max-w-[85%] ${
                 isUser ? "flex-row-reverse" : "flex-row"
