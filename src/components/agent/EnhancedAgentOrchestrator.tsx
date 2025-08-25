@@ -325,6 +325,7 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
                 onFileRemove={fileUpload.removeFile}
                 previewUrl={fileUpload.previewUrl}
                 isTyping={chatAgent.isTyping}
+                awaitingInput={chatAgent.awaitingInput}
               />
             </div>
           </section>
