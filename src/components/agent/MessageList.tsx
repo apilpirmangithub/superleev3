@@ -81,7 +81,7 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
         return (
           <div key={index}>
             <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-              <div className={`flex items-start gap-3 max-w-[85%] ${
+              <div className={`flex items-start gap-2 sm:gap-3 max-w-[90%] sm:max-w-[85%] ${
                 isUser ? "flex-row-reverse" : "flex-row"
               }`}>
                 {/* Avatar */}
