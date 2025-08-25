@@ -190,7 +190,7 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
               ]
             };
 
-            chatAgent.messages.push(message);
+            chatAgent.addCompleteMessage(message);
             setToast("IP registered ✅");
           } else {
             chatAgent.updateStatus("Tx still pending on network. Check explorer.");
