@@ -95,8 +95,8 @@ export function AIDetectionDisplay({ result, isAnalyzing = false, className = ""
             <div className="w-full bg-white/10 rounded-full h-2 mt-2">
               <div 
                 className={`h-2 rounded-full transition-all duration-300 ${
-                  result.confidence >= 0.8 ? 'bg-red-400' :
-                  result.confidence >= 0.6 ? 'bg-yellow-400' : 'bg-green-400'
+                  (result.confidence || 0) >= 0.8 ? 'bg-red-400' :
+                  (result.confidence || 0) >= 0.6 ? 'bg-yellow-400' : 'bg-green-400'
                 }`}
                 style={{ width: `${(result.confidence || 0) * 100}%` }}
               />
