@@ -26,16 +26,16 @@ function formatTimestamp(ts: number): string {
 
 function TypingIndicator() {
   return (
-    <div className="flex justify-start">
-      <div className="flex items-start gap-3 max-w-[85%]">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center shadow-lg">
+    <div className="flex justify-start animate-fade-in">
+      <div className="flex items-start gap-2 sm:gap-3 max-w-[90%] sm:max-w-[85%]">
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center shadow-lg animate-pulse-slow">
           <Bot className="h-4 w-4 text-white" />
         </div>
         <div className="flex-1">
           <div className="text-xs text-white/50 font-medium mb-1">
             SUPERLEE ASSISTANT
           </div>
-          <div className="bg-white/8 border border-white/10 rounded-2xl rounded-tl-md px-4 py-3 shadow-sm">
+          <div className="bg-white/8 border border-white/10 rounded-2xl rounded-tl-md px-4 py-3 shadow-sm hover-glow transition-smooth">
             <div className="flex items-center gap-1">
               <div className="flex gap-1">
                 <div className="w-2 h-2 bg-white/60 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
