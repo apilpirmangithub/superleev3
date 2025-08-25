@@ -18,7 +18,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file field in FormData" }, { status: 400 });
     }
 
-    if (!(file instanceof File)) {
+    // Better File detection for Edge Runtime
+    if (!file || typeof file.arrayBuffer !== 'function' || !file.name) {
       return NextResponse.json({
         error: `Expected File, got ${file?.constructor?.name || typeof file}`
       }, { status: 400 });
