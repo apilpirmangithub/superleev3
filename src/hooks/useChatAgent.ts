@@ -150,6 +150,7 @@ export function useChatAgent() {
     awaitingInput,
     isTyping,
     addMessage,
+    addCompleteMessage,
     processPrompt,
     clearPlan,
     updateStatus,
