@@ -17,15 +17,9 @@ export function useChatAgent() {
       if (saved) {
         const loadedMessages = JSON.parse(saved);
         setMessages(loadedMessages);
-        // Don't show greeting if we have existing messages
-        if (loadedMessages.length === 0) {
-          showGreeting();
-        }
-      } else {
-        showGreeting();
       }
     } catch {
-      showGreeting();
+      // Ignore errors, start with empty chat
     }
   }, []);
 
@@ -78,7 +72,10 @@ export function useChatAgent() {
       const response = superleeEngine.processMessage(trimmedPrompt, file, aiDetectionResult);
 
       if (response.type === "message") {
-        addMessage("agent", response.text, response.buttons);
+        // Only add message if text is not empty (to handle silent responses)
+        if (response.text.trim()) {
+          addMessage("agent", response.text, response.buttons);
+        }
         setCurrentPlan(null);
         return;
       }
@@ -139,9 +136,7 @@ export function useChatAgent() {
     } catch {
       // Ignore errors
     }
-    // Show greeting for new chat
-    setTimeout(showGreeting, 100);
-  }, [showGreeting]);
+  }, []);
 
   return {
     messages,
