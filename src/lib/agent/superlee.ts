@@ -3,6 +3,7 @@ import { findTokenAddress, symbolFor } from "./tokens";
 
 /** ===== Types ===== */
 export type ConversationState =
+  | "awaiting_sup"
   | "greeting"
   | "register_awaiting_file"
   | "register_analyzing_ai"
@@ -141,7 +142,7 @@ function parseSwapTokens(text: string): { tokenIn?: string; tokenOut?: string; a
 /** ===== Main Superlee Engine ===== */
 export class SuperleeEngine {
   private context: SuperleeContext = {
-    state: "greeting",
+    state: "awaiting_sup",
     flow: null
   };
 
@@ -151,7 +152,7 @@ export class SuperleeEngine {
 
   reset() {
     this.context = {
-      state: "greeting",
+      state: "awaiting_sup",
       flow: null
     };
   }
@@ -168,6 +169,9 @@ export class SuperleeEngine {
     const cleaned = message.trim().toLowerCase();
 
     switch (this.context.state) {
+      case "awaiting_sup":
+        return this.handleSupTrigger(cleaned);
+
       case "greeting":
         return this.handleGreeting(cleaned);
 
@@ -212,6 +216,23 @@ export class SuperleeEngine {
       default:
         return this.getGreeting();
     }
+  }
+
+  private handleSupTrigger(message: string): SuperleeResponse {
+    if (message === "sup") {
+      this.context.state = "greeting";
+      return {
+        type: "message",
+        text: "What do you want?",
+        buttons: ["Register IP", "Swap Token"]
+      };
+    }
+
+    // If user types anything other than "SUP", stay silent
+    return {
+      type: "message",
+      text: "" // Empty response to stay silent
+    };
   }
 
   private handleGreeting(message: string): SuperleeResponse {
