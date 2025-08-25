@@ -73,12 +73,11 @@ export function EnhancedAgentOrchestrator() {
       });
 
       // Show detection results
-      const detectionMessage = `🔍 Analysis Complete!
+      const detectionMessage = result.isAI
+        ? `Analysis complete! Your image is AI generated with ${((result.confidence || 0) * 100).toFixed(1)}% confidence.
 
-Result: ${result.isAI ? '🤖 AI Generated' : '✅ Real/Human-made'}
-Confidence: ${((result.confidence || 0) * 100).toFixed(1)}%
-
-${result.isAI ? 'This image appears to be AI-generated.' : 'This image appears to be real/human-made.'}`;
+Note: AI-generated images cannot be licensed for AI training purposes - it doesn't make sense to train AI with AI-generated content again!`
+        : `Analysis complete! Your image appears to be real/human-made with ${((result.confidence || 0) * 100).toFixed(1)}% confidence.`;
 
       chatAgent.addMessage("agent", detectionMessage);
 
