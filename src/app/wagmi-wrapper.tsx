@@ -80,14 +80,8 @@ export default function WagmiWrapper({ children }: { children: React.ReactNode }
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Validate environment and set ready state
-    try {
-      validateEnvironmentOrThrow();
-      setIsReady(true);
-    } catch (error) {
-      console.error("Environment validation failed:", error);
-      setIsReady(true); // Still render, but with warnings
-    }
+    // Skip validation for now to debug startup issues
+    setIsReady(true);
   }, []);
 
   if (!isReady) {
