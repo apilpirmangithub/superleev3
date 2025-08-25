@@ -326,6 +326,7 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
                 previewUrl={fileUpload.previewUrl}
                 isTyping={chatAgent.isTyping}
                 awaitingInput={chatAgent.awaitingInput}
+                messages={chatAgent.messages}
               />
             </div>
           </section>
