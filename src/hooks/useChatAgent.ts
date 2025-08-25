@@ -1,70 +1,105 @@
 import { useState, useCallback, useEffect } from "react";
-import { decide } from "@/lib/agent/engine";
+import { superleeEngine } from "@/lib/agent/superlee";
 import type { Message, Plan, ChatState } from "@/types/agents";
 
 export function useChatAgent() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
   const [status, setStatus] = useState<string>("");
+  const [awaitingFile, setAwaitingFile] = useState<boolean>(false);
+  const [awaitingInput, setAwaitingInput] = useState<string | null>(null);
 
   // Load messages from localStorage on mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("agentMessages");
+      const saved = localStorage.getItem("superleeMessages");
       if (saved) {
-        setMessages(JSON.parse(saved));
+        const loadedMessages = JSON.parse(saved);
+        setMessages(loadedMessages);
+        // Don't show greeting if we have existing messages
+        if (loadedMessages.length === 0) {
+          showGreeting();
+        }
+      } else {
+        showGreeting();
       }
     } catch {
-      // Ignore errors
+      showGreeting();
     }
   }, []);
 
   // Save messages to localStorage when they change
   useEffect(() => {
     try {
-      localStorage.setItem("agentMessages", JSON.stringify(messages));
+      localStorage.setItem("superleeMessages", JSON.stringify(messages));
     } catch {
       // Ignore errors
     }
   }, [messages]);
 
-  const addMessage = useCallback((role: Message["role"], text: string) => {
-    setMessages((prev) => [...prev, { role, text, ts: Date.now() }]);
+  const showGreeting = useCallback(() => {
+    const greeting = superleeEngine.getGreeting();
+    if (greeting.type === "message") {
+      setMessages([{
+        role: "agent",
+        text: greeting.text,
+        ts: Date.now(),
+        buttons: greeting.buttons
+      }]);
+    }
   }, []);
 
-  const processPrompt = useCallback((prompt: string) => {
+  const addMessage = useCallback((role: Message["role"], text: string, buttons?: string[]) => {
+    setMessages((prev) => [...prev, { role, text, ts: Date.now(), buttons }]);
+  }, []);
+
+  const processPrompt = useCallback((prompt: string, file?: File, aiDetectionResult?: { isAI: boolean; confidence: number }) => {
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt) return;
 
     // Add user message
     addMessage("you", trimmedPrompt);
     setStatus("");
+    setAwaitingFile(false);
+    setAwaitingInput(null);
 
-    // Process with AI engine
-    const decision = decide(trimmedPrompt);
+    // Process with Superlee engine
+    const response = superleeEngine.processMessage(trimmedPrompt, file, aiDetectionResult);
 
-    if (decision.type === "ask") {
-      // AI needs more information
+    if (response.type === "message") {
+      addMessage("agent", response.text, response.buttons);
       setCurrentPlan(null);
-      addMessage("agent", decision.question);
-      setStatus(decision.question);
       return;
     }
 
-    // AI has a plan
-    setCurrentPlan({
-      type: decision.intent.kind as "swap" | "register",
-      steps: decision.plan,
-      intent: decision.intent,
-    });
+    if (response.type === "awaiting_file") {
+      setAwaitingFile(true);
+      addMessage("agent", "Please upload your file to continue.");
+      return;
+    }
 
-    // Show plan to user
-    const planText = [
-      "Plan:",
-      ...decision.plan.map((step: string, i: number) => `${i + 1}. ${step}`)
-    ].join("\n");
-    
-    addMessage("agent", planText);
+    if (response.type === "awaiting_input") {
+      setAwaitingInput(response.prompt);
+      addMessage("agent", response.prompt);
+      return;
+    }
+
+    if (response.type === "plan") {
+      // AI has a plan
+      setCurrentPlan({
+        type: response.intent.kind as "swap" | "register",
+        steps: response.plan,
+        intent: response.intent,
+      });
+
+      // Show plan to user
+      const planText = [
+        "Plan:",
+        ...response.plan.map((step: string, i: number) => `${i + 1}. ${step}`)
+      ].join("\n");
+
+      addMessage("agent", planText);
+    }
   }, [addMessage]);
 
   const clearPlan = useCallback(() => {
@@ -78,20 +113,27 @@ export function useChatAgent() {
   }, [addMessage]);
 
   const newChat = useCallback(() => {
+    superleeEngine.reset();
     setMessages([]);
     setCurrentPlan(null);
     setStatus("");
+    setAwaitingFile(false);
+    setAwaitingInput(null);
     try {
-      localStorage.removeItem("agentMessages");
+      localStorage.removeItem("superleeMessages");
     } catch {
       // Ignore errors
     }
-  }, []);
+    // Show greeting for new chat
+    setTimeout(showGreeting, 100);
+  }, [showGreeting]);
 
   return {
     messages,
     currentPlan,
     status,
+    awaitingFile,
+    awaitingInput,
     addMessage,
     processPrompt,
     clearPlan,
