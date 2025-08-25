@@ -28,12 +28,16 @@ export function toIpfsUri(cidOrUrl?: string) {
  * Simple fetch with JSON parsing and error handling (no retry)
  */
 export async function fetchJSON(input: RequestInfo | URL, init?: RequestInit) {
-  const r = await fetch(input, init);
-  if (!r.ok) {
-    const errorText = await r.text();
-    throw new Error(`HTTP ${r.status}: ${errorText}`);
+  const response = await fetch(input, init);
+
+  if (!response.ok) {
+    // Clone response untuk error handling
+    const errorText = await response.clone().text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
   }
-  return await r.json(); // ✅ Langsung parse JSON
+
+  // Langsung parse JSON tanpa text() dulu
+  return await response.json();
 }
 
 /**
