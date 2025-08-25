@@ -384,9 +384,11 @@ export class SuperleeEngine {
     const tokenOutAddr = findTokenAddress(this.context.swapData.tokenOut);
     
     if (!tokenInAddr || !tokenOutAddr) {
+      // Get available token symbols
+      const availableTokens = ["WIP", "USDC", "WETH"]; // Add more as needed
       return {
         type: "awaiting_input",
-        prompt: `Token not found. Supported tokens: ${Object.keys(findTokenAddress("")).join(", ")}`
+        prompt: `Token not found. Supported tokens: ${availableTokens.join(", ")}`
       };
     }
 
