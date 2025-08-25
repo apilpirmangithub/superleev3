@@ -5,7 +5,7 @@ import { compressImage } from "@/lib/utils/image";
 import { uploadFile, uploadJSON, extractCid, toHttps, toIpfsUri } from "@/lib/utils/ipfs";
 import { keccakOfFile, keccakOfJson } from "@/lib/utils/crypto";
 import type { RegisterIntent } from "@/lib/agent/engine";
-import type { RegisterState } from "@/types/agents";
+import type { RegisterState, AgentError } from "@/types/agents";
 
 const SPG_COLLECTION = (process.env.NEXT_PUBLIC_SPG_COLLECTION as `0x${string}`) ||
   "0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc";
