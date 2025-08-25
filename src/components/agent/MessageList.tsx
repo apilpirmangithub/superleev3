@@ -118,10 +118,10 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
                   <div className={`relative group ${
                     isUser ? "ml-2 sm:ml-4" : "mr-2 sm:mr-4"
                   }`}>
-                    <div className={`rounded-2xl px-4 py-3 shadow-sm transition-all duration-200 hover:shadow-md ${
+                    <div className={`rounded-2xl px-4 py-3 shadow-sm transition-all duration-200 hover:shadow-lg hover-glow ${
                       isUser
-                        ? "bg-gradient-to-br from-sky-500 to-sky-600 text-white rounded-br-md border border-sky-400/30"
-                        : "bg-white/8 border border-white/10 text-white rounded-tl-md"
+                        ? "bg-gradient-to-br from-sky-500 to-sky-600 text-white rounded-br-md border border-sky-400/30 hover:from-sky-400 hover:to-sky-500"
+                        : "bg-white/8 border border-white/10 text-white rounded-tl-md hover:bg-white/12 hover:border-white/20"
                     }`}>
                       <pre className="whitespace-pre-wrap text-sm break-words font-sans leading-relaxed">
                         {message.text}
