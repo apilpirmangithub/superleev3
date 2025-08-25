@@ -200,7 +200,12 @@ export const DEFAULT_LICENSE_SETTINGS: LicenseSettings = {
 };
 
 // License type descriptions
-export const LICENSE_DESCRIPTIONS = {
+export const LICENSE_DESCRIPTIONS: Record<LicenseType, {
+  title: string;
+  description: string;
+  icon: string;
+  features: string[];
+}> = {
   open_use: {
     title: 'Open Use',
     description: 'Free for any non-commercial use, derivatives allowed',
@@ -225,7 +230,7 @@ export const LICENSE_DESCRIPTIONS = {
     icon: '🎨',
     features: ['Commercial use allowed', 'Derivatives allowed', 'Revenue sharing', 'Attribution required']
   }
-} as const;
+};
 
 // Utility functions
 export function formatLicensePrice(price: number): string {
