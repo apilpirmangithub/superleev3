@@ -73,7 +73,7 @@ export function Composer({ onSubmit, status, fileUpload: externalFileUpload }: C
             ref={textareaRef}
             rows={1}
             className="flex-1 resize-none rounded-md bg-transparent px-2 py-2 text-base sm:text-lg placeholder:opacity-50 focus:outline-none scrollbar-invisible"
-            placeholder='Swap 1 WIP > USDC slippage 0.5%  |  Register this image IP, title "Sunset" by-nc'
+            placeholder='Reply to Superlee Assistant...'
             value={prompt}
             onChange={(e) => {
               setPrompt(e.target.value);
