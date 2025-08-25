@@ -25,6 +25,7 @@ export type DecideResult = Ask | Ok;
 const num = (s: string) => parseFloat(s.replace(/,/g, "."));
 const pct = (s: string) => parseFloat(s.replace(/,/g, "."));
 
+// Simple regex patterns
 const RE_ADDR   = /0x[a-fA-F0-9]{40}/;
 const RE_AMOUNT = /(\d[\d.,]*)/;
 const RE_ARROW  = /(?:>|→|->|\sto\s|\ske\s)/i;
@@ -32,6 +33,38 @@ const RE_SLIP   = /(slip(?:page|ag[ei])?|slippage)\s*([0-9]+(?:[.,][0-9]+)?)\s*%
 
 const TRIGGERS_SWAP = /\b(swap|tukar|convert|trade)\b/i;
 const TRIGGERS_REG  = /\b(register|daftar|daftarkan|mint)\b.*\b(ip|ipa|nft)?\b/i;
+
+// Helper functions to parse swap patterns
+function parseSwapPattern(text: string): { amount: number; tokenIn: string; tokenOut: string } | null {
+  // Pattern 1: "swap 1 WIP > USDC"
+  const pattern1 = new RegExp(`(swap|tukar|convert|trade)\\s+${RE_AMOUNT.source}\\s+([a-zA-Z0-9]+)\\s+${RE_ARROW.source}\\s+([a-zA-Z0-9]+)`, "i");
+  const match1 = text.match(pattern1);
+  if (match1) {
+    return {
+      amount: num(match1[2]),
+      tokenIn: match1[3],
+      tokenOut: match1[4]
+    };
+  }
+
+  // Pattern 2: "WIP > USDC 1.2"
+  const pattern2 = new RegExp(`([a-zA-Z0-9]+)\\s+${RE_ARROW.source}\\s+([a-zA-Z0-9]+)\\s+${RE_AMOUNT.source}`, "i");
+  const match2 = text.match(pattern2);
+  if (match2) {
+    return {
+      amount: num(match2[3]),
+      tokenIn: match2[1],
+      tokenOut: match2[2]
+    };
+  }
+
+  return null;
+}
+
+function extractSlippage(text: string): number | undefined {
+  const match = text.match(RE_SLIP);
+  return match ? pct(match[2]) : undefined;
+}
 
 function parseLicense(txt: string): RegisterIntent["license"] | undefined {
   const s = txt.toLowerCase();
