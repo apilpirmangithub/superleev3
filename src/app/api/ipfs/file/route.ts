@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createHash } from "crypto";
 
 export const runtime = "edge";
 
@@ -25,10 +24,12 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // Mock IPFS upload for testing
+    // Mock IPFS upload for testing using Web Crypto API
     const buffer = await file.arrayBuffer();
-    const hash = createHash('sha256').update(new Uint8Array(buffer)).digest('hex');
-    const mockCid = `Qm${hash.substring(0, 44)}`;
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const mockCid = `Qm${hashHex.substring(0, 44)}`;
     const url = `https://ipfs.io/ipfs/${mockCid}`;
 
     console.log("Mock file upload successful:", { cid: mockCid, url, fileName: file.name });
