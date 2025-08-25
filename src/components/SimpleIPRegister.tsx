@@ -158,7 +158,7 @@ export function SimpleIPRegister() {
           <div className="pt-4">
             <button
               onClick={handleRegister}
-              disabled={!file || !title || state.status === 'processing'}
+              disabled={!file || !title || state.status !== 'idle'}
               className="w-full py-4 bg-sky-500 hover:bg-sky-400 disabled:bg-white/10 disabled:text-white/40 text-white font-medium rounded-2xl transition-colors disabled:cursor-not-allowed"
             >
               Register IP Now
