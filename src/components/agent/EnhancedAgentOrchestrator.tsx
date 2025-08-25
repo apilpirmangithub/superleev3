@@ -52,7 +52,7 @@ export function EnhancedAgentOrchestrator() {
     setAiDetectionResult(null);
 
     // Add immediate message when starting analysis
-    chatAgent.addMessage("agent", "tunggu dulu aku akan analisa gambar mu ai atau analisa gambar mu ai atau asli");
+    chatAgent.addMessage("agent", "tunggu dulu aku akan analisa gambar mu ai atau asli");
 
     // Store file reference before removing preview
     const currentFile = fileUpload.file;
