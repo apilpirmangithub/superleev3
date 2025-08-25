@@ -81,7 +81,7 @@ export function Composer({
       <div className="mx-auto w-full max-w-[900px] px-2 sm:px-3 lg:px-4 py-3 lg:py-4">
         {/* File Preview */}
         {file && previewUrl && (
-          <div className="mb-3 p-3 rounded-2xl bg-white/8 border border-white/15 backdrop-blur-sm">
+          <div className="mb-3 p-3 rounded-2xl bg-white/8 border border-white/15 backdrop-blur-sm animate-slide-up hover-glow transition-smooth">
             <div className="flex items-start gap-3">
               <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0">
                 <Image
