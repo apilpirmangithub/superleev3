@@ -206,7 +206,7 @@ export class SuperleeEngine {
       return {
         type: "message",
         text: "Alright, please upload your IP file.",
-        buttons: ["📎 Upload File Button"]
+        buttons: ["Upload File"]
       };
     }
 
