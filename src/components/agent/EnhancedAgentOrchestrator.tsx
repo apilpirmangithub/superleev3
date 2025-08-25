@@ -150,79 +150,62 @@ Tx: ${result.txHash}
 
       chatAgent.updateStatus("📝 Registering IP...");
 
-      // Use default license settings from the plan
-      const licenseSettings: LicenseSettings = {
-        ...DEFAULT_LICENSE_SETTINGS,
-        pilType: plan.intent.pilType || DEFAULT_LICENSE_SETTINGS.pilType,
-      };
+      // Map old license types to new presets
+      let licensePreset: 'open' | 'remix' | 'commercial' = 'remix';
+      if (plan.intent.pilType === 'open_use') licensePreset = 'open';
+      if (plan.intent.pilType === 'commercial_use') licensePreset = 'commercial';
 
-      const result = await registerAgent.executeRegister(plan.intent, analyzedFile, licenseSettings);
+      const result = await simpleRegister.register(
+        analyzedFile,
+        plan.intent.title || 'IP Asset',
+        plan.intent.prompt || '',
+        licensePreset
+      );
       
       if (result.success) {
-        // Show initial success with transaction link
-        const submittedMessage = `Tx submitted ⏳\n↗ View: ${explorerBase}/tx/${result.txHash}`;
-        chatAgent.addMessage("agent", submittedMessage);
+        const successText = `✅ IP Registration Complete!
 
-        // Wait for confirmation
-        try {
-          chatAgent.updateStatus("Waiting for confirmation...");
-          const confirmed = await waitForTxConfirmation(
-            publicClient, 
-            result.txHash as Hex,
-            { timeoutMs: 90_000 }
-          );
+Your image has been successfully registered!
 
-          if (confirmed) {
-            const successText = `Register success ✅
+AI Detected: ${result.aiDetected ? 'Yes 🤖' : 'No 👨‍🎨'}`;
 
-Your image has been successfully registered as IP!
+        // Create message with image and links
+        const message = {
+          role: "agent" as const,
+          text: successText,
+          ts: Date.now(),
+          image: result.imageUrl ? {
+            url: result.imageUrl,
+            alt: "Registered IP image"
+          } : undefined,
+          links: [
+            {
+              text: `📋 View IP: ${result.ipId}`,
+              url: `https://aeneid.explorer.story.foundation/ipa/${result.ipId}`
+            },
+            {
+              text: `🔗 View Transaction: ${result.txHash}`,
+              url: `${explorerBase}/tx/${result.txHash}`
+            }
+          ]
+        };
 
-License Type: ${result.licenseType}
-AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) * 100).toFixed(1)}%)`;
-
-            // Create message with image and links
-            const message = {
-              role: "agent" as const,
-              text: successText,
-              ts: Date.now(),
-              image: result.imageUrl ? {
-                url: result.imageUrl,
-                alt: "Registered IP image"
-              } : undefined,
-              links: [
-                {
-                  text: `📋 View IP: ${result.ipId}`,
-                  url: `https://aeneid.explorer.story.foundation/ipa/${result.ipId}`
-                },
-                {
-                  text: `🔗 View Transaction: ${result.txHash}`,
-                  url: `${explorerBase}/tx/${result.txHash}`
-                }
-              ]
-            };
-
-            chatAgent.addCompleteMessage(message);
-            setToast("IP registered ✅");
-          } else {
-            chatAgent.updateStatus("Tx still pending on network. Check explorer.");
-          }
-        } catch {
-          chatAgent.updateStatus("Tx still pending on network. Check explorer.");
-        }
+        chatAgent.addCompleteMessage(message);
+        setToast("IP registered ✅");
       } else {
-        chatAgent.addMessage("agent", `Register error: ${result.error}`);
+        chatAgent.addMessage("agent", `❌ Registration failed: ${result.error}`);
         setToast("Register error ❌");
       }
       
       chatAgent.clearPlan();
-      registerAgent.resetRegister();
+      simpleRegister.reset();
       setAnalyzedFile(null);
       setAiDetectionResult(null);
     }
   }, [
     chatAgent,
     swapAgent,
-    registerAgent,
+    simpleRegister,
     analyzedFile,
     publicClient,
     explorerBase,
