@@ -77,7 +77,7 @@ export function SimpleIPRegister() {
         <p className="text-white/60">Simple, fast, and secure IP registration</p>
       </div>
 
-      {state.status === 'processing' ? (
+      {state.status === 'processing' as any ? (
         <div className="bg-white/5 rounded-2xl p-6 text-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin text-sky-400 mx-auto" />
           <div className="text-white font-medium">{state.step}</div>
