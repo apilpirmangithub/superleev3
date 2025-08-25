@@ -101,7 +101,7 @@ export function Composer({
               </div>
               <button
                 onClick={onFileRemove}
-                className="p-1 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                className="p-1 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-bounce hover:scale-110"
               >
                 <X className="h-4 w-4" />
               </button>
