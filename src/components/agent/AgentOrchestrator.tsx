@@ -62,7 +62,7 @@ Tx: ${result.txHash}
       swapAgent.resetSwap();
     }
     
-    else if (plan.type === "register") {
+    else if (plan.type === "register" && plan.intent.kind === "register") {
       if (!fileUpload.file) {
         chatAgent.addMessage("agent", "❌ Please attach an image first!");
         setToast("Attach image first 📎");
@@ -70,7 +70,7 @@ Tx: ${result.txHash}
       }
 
       chatAgent.updateStatus("📝 Registering IP...");
-      
+
       const result = await registerAgent.executeRegister(plan.intent, fileUpload.file);
       
       if (result.success) {
