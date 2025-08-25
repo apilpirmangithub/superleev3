@@ -364,14 +364,10 @@ export class SuperleeEngine {
     };
     
     const plan = [
-      `Register IP: "${this.context.registerData.name}"`,
+      `Name IP : "${this.context.registerData.name}"`,
       `Description: "${this.context.registerData.description}"`,
       `License: ${license}`,
-      `AI Detected: ${this.context.registerData.aiDetected ? 'Yes' : 'No'}`,
-      "Upload file to IPFS",
-      "Build IP metadata",
-      "Mint + Register IP on Story Protocol",
-      "Show transaction result"
+      `AI Detected: ${this.context.registerData.aiDetected ? 'Yes' : 'No'}`
     ];
     
     return {
