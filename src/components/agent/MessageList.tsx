@@ -115,11 +115,17 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
                   <div className={`relative group ${
                     isUser ? "ml-2 sm:ml-4" : "mr-2 sm:mr-4"
                   }`}>
-                    <div className={`rounded-2xl px-4 py-3 shadow-sm transition-all duration-200 hover:shadow-lg hover-glow ${
-                      isUser
-                        ? "bg-gradient-to-br from-sky-500 to-sky-600 text-white rounded-br-md border border-sky-400/30 hover:from-sky-400 hover:to-sky-500"
-                        : "bg-white/8 border border-white/10 text-white rounded-tl-md hover:bg-white/12 hover:border-white/20"
-                    }`}>
+                    <div
+                      className={`rounded-2xl px-4 py-3 shadow-sm transition-all duration-200 hover:shadow-lg hover-glow ${
+                        isUser
+                          ? "bg-gradient-to-br from-sky-500 to-sky-600 text-white rounded-br-md border border-sky-400/30 hover:from-sky-400 hover:to-sky-500"
+                          : "bg-white/8 border border-white/10 text-white rounded-tl-md hover:bg-white/12 hover:border-white/20"
+                      }`}
+                      onMouseDown={(e) => {
+                        // Prevent message clicks from stealing focus from the input
+                        e.preventDefault();
+                      }}
+                    >
                       <div className="text-sm break-words font-sans leading-relaxed">
                         {message.isLoading ? (
                           <div className="flex items-center gap-2">
@@ -131,7 +137,13 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
                             </div>
                           </div>
                         ) : (
-                          <pre className="whitespace-pre-wrap">
+                          <pre
+                            className="whitespace-pre-wrap select-text"
+                            onMouseDown={(e) => {
+                              // Allow text selection but prevent focus stealing
+                              e.stopPropagation();
+                            }}
+                          >
                             {message.text}
                           </pre>
                         )}
