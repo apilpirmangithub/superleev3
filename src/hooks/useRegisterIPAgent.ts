@@ -136,7 +136,23 @@ export function useRegisterIPAgent() {
         });
 
         console.log('✅ Registration successful:', result);
-        return result;
+
+        setRegisterState({
+          status: 'success',
+          progress: 100,
+          error: null,
+          ipId: result.ipId,
+          txHash: result.txHash,
+        });
+
+        return {
+          success: true,
+          ipId: result.ipId,
+          txHash: result.txHash,
+          imageUrl: imageGateway,
+          ipMetadataUrl: toHttps(ipMetaCid),
+          nftMetadataUrl: toHttps(nftMetaCid),
+        };
       } catch (contractError: any) {
         console.error('❌ Contract Error Details:', {
           message: contractError.message,
