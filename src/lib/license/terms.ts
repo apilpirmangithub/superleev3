@@ -257,3 +257,24 @@ export function allowsDerivatives(pilType: LicenseType): boolean {
 export function requiresAttribution(pilType: LicenseType): boolean {
   return pilType !== 'open_use';
 }
+
+// Helper functions for feature checking
+export function hasCommercialUse(pilType: LicenseType): boolean {
+  return LICENSE_DESCRIPTIONS[pilType].features.some(feature => feature === 'Commercial use allowed');
+}
+
+export function hasDerivativesAllowed(pilType: LicenseType): boolean {
+  return LICENSE_DESCRIPTIONS[pilType].features.some(feature => feature === 'Derivatives allowed');
+}
+
+export function hasAttributionRequired(pilType: LicenseType): boolean {
+  return LICENSE_DESCRIPTIONS[pilType].features.some(feature => feature === 'Attribution required');
+}
+
+export function hasRevenueSharing(pilType: LicenseType): boolean {
+  return LICENSE_DESCRIPTIONS[pilType].features.some(feature => feature === 'Revenue sharing');
+}
+
+export function hasFreeLicense(pilType: LicenseType): boolean {
+  return LICENSE_DESCRIPTIONS[pilType].features.some(feature => feature === 'Free license');
+}
