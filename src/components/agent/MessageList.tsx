@@ -33,7 +33,7 @@ function TypingIndicator() {
         </div>
         <div className="flex-1">
           <div className="text-xs text-white/50 font-medium mb-1">
-            Chat with Superlee
+            CHAT WITH SUPERLEE
           </div>
           <div className="bg-white/8 border border-white/10 rounded-2xl rounded-tl-md px-4 py-3 shadow-sm hover-glow transition-smooth">
             <div className="flex items-center gap-1">
@@ -59,9 +59,9 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
           <Bot className="h-8 w-8 text-white" />
         </div>
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-white mb-2">Chat with Superlee</h3>
+          <h3 className="text-lg font-semibold text-white mb-2">SUPERLEE</h3>
           <p className="text-sm text-white/60 max-w-md">
-            Your crypto companion is ready to help! 🚀 I can swap your tokens faster than you can say "blockchain" or help you register IP like a digital notary! 📝
+            Psst... just type "SUP" to wake me up! 😉
           </p>
           <div className="mt-4 text-xs text-white/40">
             Psst... just type "SUP" to wake me up! 😉
@@ -110,7 +110,7 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
                   {/* Sender name (only for agent) */}
                   {!isUser && (
                     <div className="text-xs text-white/50 font-medium">
-                      Chat with Superlee
+                      CHAT WITH SUPERLEE
                     </div>
                   )}
 
