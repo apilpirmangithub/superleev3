@@ -234,7 +234,7 @@ export class SuperleeEngine {
       this.context.registerData = {};
       return {
         type: "message",
-        text: "Alright, please upload your IP file.",
+        text: "Great! Let's register your IP 🎯\n\nJust upload your image and I'll handle the rest:",
         buttons: ["Upload File"]
       };
     }
@@ -267,7 +267,7 @@ export class SuperleeEngine {
       this.context.state = "register_analyzing_ai";
       return {
         type: "message",
-        text: "📁 File uploaded successfully!\n\n🔍 Analyzing image for AI detection... Please wait."
+        text: "📁 Got it! Analyzing your image... ⏳"
       };
     }
   }
