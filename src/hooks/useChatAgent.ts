@@ -72,7 +72,10 @@ export function useChatAgent() {
       const response = superleeEngine.processMessage(trimmedPrompt, file, aiDetectionResult);
 
       if (response.type === "message") {
-        addMessage("agent", response.text, response.buttons);
+        // Only add message if text is not empty (to handle silent responses)
+        if (response.text.trim()) {
+          addMessage("agent", response.text, response.buttons);
+        }
         setCurrentPlan(null);
         return;
       }
