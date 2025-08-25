@@ -45,24 +45,57 @@ export async function fetchJSON(input: RequestInfo | URL, init?: RequestInit) {
 }
 
 /**
- * Upload file to IPFS via API route
+ * Retry helper with exponential backoff
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: Error;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+
+      if (attempt === maxRetries) {
+        throw new Error(`Upload failed after ${maxRetries + 1} attempts: ${lastError.message}`);
+      }
+
+      // Exponential backoff: 1s, 2s, 4s...
+      const delay = baseDelay * Math.pow(2, attempt);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError!;
+}
+
+/**
+ * Upload file to IPFS via API route with retry mechanism
  */
 export async function uploadFile(file: File) {
-  const fd = new FormData();
-  fd.append("file", file, file.name);
-  return await fetchJSON("/api/ipfs/file", {
-    method: "POST",
-    body: fd,
+  return withRetry(async () => {
+    const fd = new FormData();
+    fd.append("file", file, file.name);
+    return await fetchJSON("/api/ipfs/file", {
+      method: "POST",
+      body: fd,
+    });
   });
 }
 
 /**
- * Upload JSON to IPFS via API route
+ * Upload JSON to IPFS via API route with retry mechanism
  */
 export async function uploadJSON(obj: any) {
-  return await fetchJSON("/api/ipfs/json", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(obj),
+  return withRetry(async () => {
+    return await fetchJSON("/api/ipfs/json", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(obj),
+    });
   });
 }
