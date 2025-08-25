@@ -133,9 +133,7 @@ export function useChatAgent() {
     } catch {
       // Ignore errors
     }
-    // Show greeting for new chat
-    setTimeout(showGreeting, 100);
-  }, [showGreeting]);
+  }, []);
 
   return {
     messages,
