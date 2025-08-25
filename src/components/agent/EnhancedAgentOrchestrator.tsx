@@ -27,6 +27,7 @@ export function EnhancedAgentOrchestrator() {
   const [aiDetectionResult, setAiDetectionResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzedFile, setAnalyzedFile] = useState<File | null>(null);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState<number | null>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   
   const explorerBase = storyAeneid.blockExplorers?.default.url || "https://aeneid.storyscan.xyz";
@@ -52,8 +53,16 @@ export function EnhancedAgentOrchestrator() {
     setIsAnalyzing(true);
     setAiDetectionResult(null);
 
-    // Add immediate message when starting analysis
-    chatAgent.addMessage("agent", "Wait a moment, let me analyze if your image is AI generated or real......");
+    // Add immediate loading message when starting analysis
+    const loadingMessage = {
+      role: "agent" as const,
+      text: "Wait a moment, let me analyze if your image is AI generated or real",
+      ts: Date.now(),
+      isLoading: true
+    };
+
+    chatAgent.addCompleteMessage(loadingMessage);
+    setLoadingMessageIndex(chatAgent.messages.length); // Store index for later update
 
     // Store file reference before removing preview
     const currentFile = fileUpload.file;
@@ -72,14 +81,24 @@ export function EnhancedAgentOrchestrator() {
         status: 'completed'
       });
 
-      // Show detection results
-      const detectionMessage = result.isAI
+      // Update loading message to show results
+      const detectionText = result.isAI
         ? `Analysis complete! Your image is AI generated with ${((result.confidence || 0) * 100).toFixed(1)}% confidence.
 
 Note: AI-generated images cannot be licensed for AI training purposes - it doesn't make sense to train AI with AI-generated content again!`
         : `Analysis complete! Your image appears to be real/human-made with ${((result.confidence || 0) * 100).toFixed(1)}% confidence.`;
 
-      chatAgent.addMessage("agent", detectionMessage);
+      // Update the loading message to remove animation and show results
+      if (loadingMessageIndex !== null) {
+        chatAgent.messages[loadingMessageIndex] = {
+          ...chatAgent.messages[loadingMessageIndex],
+          text: detectionText,
+          isLoading: false
+        };
+        setLoadingMessageIndex(null);
+      } else {
+        chatAgent.addMessage("agent", detectionText);
+      }
 
       // Process the AI detection result with Superlee engine
       chatAgent.processPrompt("AI analysis completed", currentFile, result);
@@ -91,8 +110,19 @@ Note: AI-generated images cannot be licensed for AI training purposes - it doesn
         status: 'failed'
       });
 
-      // Show error message
-      chatAgent.addMessage("agent", "❌ Sorry, I couldn't analyze the image. But don't worry, you can still proceed with registration!");
+      // Update loading message to show error
+      const errorText = "❌ Sorry, I couldn't analyze the image. But don't worry, you can still proceed with registration!";
+
+      if (loadingMessageIndex !== null) {
+        chatAgent.messages[loadingMessageIndex] = {
+          ...chatAgent.messages[loadingMessageIndex],
+          text: errorText,
+          isLoading: false
+        };
+        setLoadingMessageIndex(null);
+      } else {
+        chatAgent.addMessage("agent", errorText);
+      }
 
       // Continue with file upload even if AI detection fails
       chatAgent.processPrompt("AI analysis completed", currentFile, { isAI: false, confidence: 0 });
