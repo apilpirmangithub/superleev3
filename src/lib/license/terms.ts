@@ -237,7 +237,7 @@ export function getLicenseDisplayName(pilType: LicenseType): string {
   return LICENSE_DESCRIPTIONS[pilType].title;
 }
 
-export function getLicenseFeatures(pilType: LicenseType): string[] {
+export function getLicenseFeatures(pilType: LicenseType): readonly string[] {
   return LICENSE_DESCRIPTIONS[pilType].features;
 }
 
