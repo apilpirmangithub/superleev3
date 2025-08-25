@@ -19,17 +19,17 @@ export async function POST(req: NextRequest) {
 
     // Try SightEngine first, fallback to simulation
     try {
-      console.log("🎯 Attempting SightEngine detection...");
-      const result = await detectWithSightEngine(image);
-      console.log("✅ SightEngine detection successful:", result, `(${Date.now() - startTime}ms)`);
+      if (debugMode) console.log("🎯 Attempting SightEngine detection...");
+      const result = await detectWithSightEngine(image, debugMode);
+      if (debugMode) console.log("✅ SightEngine detection successful:", result, `(${Date.now() - startTime}ms)`);
       return NextResponse.json(result);
     } catch (sightEngineError) {
-      console.log("⚠️ SightEngine not available, using simulation:", sightEngineError.message);
+      if (debugMode) console.log("⚠️ SightEngine not available, using simulation:", sightEngineError.message);
 
       // Fallback to simulation
-      console.log("🎭 Starting simulation detection...");
+      if (debugMode) console.log("🎭 Starting simulation detection...");
       const buffer = Buffer.from(image, 'base64');
-      const confidence = await simulateAIDetection(buffer);
+      const confidence = await simulateAIDetection(buffer, debugMode);
       const isAI = confidence > 0.5; // Lower threshold for better demo experience
 
       const result = {
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
         source: 'simulation'
       };
 
-      console.log("✅ Simulation detection complete:", result, `(${Date.now() - startTime}ms)`);
+      if (debugMode) console.log("✅ Simulation detection complete:", result, `(${Date.now() - startTime}ms)`);
       return NextResponse.json(result);
     }
 
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 }
 
 // SightEngine AI Detection Integration
-async function detectWithSightEngine(imageBase64: string): Promise<{ isAI: boolean; confidence: number; source: string }> {
+async function detectWithSightEngine(imageBase64: string, debugMode: boolean = false): Promise<{ isAI: boolean; confidence: number; source: string }> {
   const SIGHTENGINE_API_USER = process.env.SIGHTENGINE_API_USER;
   const SIGHTENGINE_API_SECRET = process.env.SIGHTENGINE_API_SECRET;
 
@@ -60,7 +60,7 @@ async function detectWithSightEngine(imageBase64: string): Promise<{ isAI: boole
     throw new Error("SightEngine credentials not configured - add SIGHTENGINE_API_USER and SIGHTENGINE_API_SECRET to environment");
   }
 
-  console.log("🔑 Using SightEngine credentials (user:", SIGHTENGINE_API_USER, ")");
+  if (debugMode) console.log("🔑 Using SightEngine credentials (user:", SIGHTENGINE_API_USER, ")");
   
   // Create form data for SightEngine API
   const formData = new FormData();
@@ -98,7 +98,7 @@ async function detectWithSightEngine(imageBase64: string): Promise<{ isAI: boole
 }
 
 // Fallback simulation for when SightEngine is not available
-async function simulateAIDetection(buffer: Buffer): Promise<number> {
+async function simulateAIDetection(buffer: Buffer, debugMode: boolean = false): Promise<number> {
   // Fast simulation for demo purposes
   // Used as fallback when SightEngine is not configured
 
@@ -138,7 +138,7 @@ async function simulateAIDetection(buffer: Buffer): Promise<number> {
     return Math.min(Math.max(confidence, 0.05), 0.95);
 
   } catch (error) {
-    console.error("Simulation error:", error);
+    if (debugMode) console.error("Simulation error:", error);
     return 0.3; // Default confidence
   }
 }
