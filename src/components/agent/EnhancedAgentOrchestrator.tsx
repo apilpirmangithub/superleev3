@@ -246,6 +246,11 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
             <Composer
               onSubmit={(prompt) => chatAgent.processPrompt(prompt, fileUpload.file || undefined, aiDetectionResult)}
               status={chatAgent.status}
+              file={fileUpload.file}
+              onFileSelect={fileUpload.handleFileSelect}
+              onFileRemove={fileUpload.removeFile}
+              previewUrl={fileUpload.previewUrl}
+              isTyping={chatAgent.isTyping}
             />
           </section>
         </div>
