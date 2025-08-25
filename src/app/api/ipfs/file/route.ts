@@ -2,11 +2,6 @@
 import { PinataSDK } from "pinata-web3";
 import { NextRequest, NextResponse } from "next/server";
 
-// Extend FormData interface to ensure get method is available
-interface ExtendedFormData extends FormData {
-  get(name: string): FormDataEntryValue | null;
-}
-
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
@@ -22,14 +17,22 @@ export async function POST(req: NextRequest) {
       pinataGateway: PINATA_GATEWAY,
     });
 
-    const formData = (await req.formData()) as ExtendedFormData;
-    const fileEntry = formData.get("file");
+    const formData = await req.formData();
 
-    if (!fileEntry || !(fileEntry instanceof File)) {
+    // Use iteration to find the file instead of .get() method
+    let file: File | null = null;
+    for (const [key, value] of formData.entries()) {
+      if (key === "file" && value instanceof File) {
+        file = value;
+        break;
+      }
+    }
+
+    if (!file) {
       return NextResponse.json({ error: "No valid file provided" }, { status: 400 });
     }
 
-    const upload = await pinata.upload.file(fileEntry);
+    const upload = await pinata.upload.file(file);
     const cid = upload.IpfsHash;
     const url = `https://${PINATA_GATEWAY}/ipfs/${cid}`;
 
