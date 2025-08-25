@@ -2,9 +2,10 @@
 import { findTokenAddress, symbolFor } from "./tokens";
 
 /** ===== Types ===== */
-export type ConversationState = 
+export type ConversationState =
   | "greeting"
   | "register_awaiting_file"
+  | "register_analyzing_ai"
   | "register_awaiting_name"
   | "register_awaiting_description"
   | "register_awaiting_license"
@@ -178,7 +179,22 @@ export class SuperleeEngine {
           type: "awaiting_file"
         };
 
+      case "register_analyzing_ai":
+        if (aiDetectionResult) {
+          return this.handleAIAnalysisComplete(aiDetectionResult);
+        }
+        return {
+          type: "message",
+          text: "🔍 Sedang menganalisis gambar untuk deteksi AI..."
+        };
+
       case "register_awaiting_name":
+        if (message.toLowerCase().includes("lanjutkan") || message.toLowerCase().includes("continue")) {
+          return {
+            type: "awaiting_input",
+            prompt: "Apa nama IP Anda?"
+          };
+        }
         return this.handleNameInput(message);
 
       case "register_awaiting_description":
@@ -227,24 +243,43 @@ export class SuperleeEngine {
     if (!this.context.registerData) {
       this.context.registerData = {};
     }
-    
+
     this.context.registerData.file = file;
-    
+
     if (aiResult) {
-      this.context.registerData.aiDetected = aiResult.isAI;
-      this.context.registerData.aiConfidence = aiResult.confidence;
-      
-      let response = `File uploaded successfully! 📁\n\n`;
-      
-      if (aiResult.isAI) {
-        response += `This content was created by AI. ✅ You can still register it, but the AI Training Allowed license option won't be available.\n\n`;
-      }
+      // AI detection sudah selesai, langsung proses
+      return this.handleAIAnalysisComplete(aiResult);
+    } else {
+      // File baru diupload, tunggu AI detection
+      this.context.state = "register_analyzing_ai";
+      return {
+        type: "message",
+        text: "📁 File berhasil diupload!\n\n🔍 Sedang menganalisis gambar untuk deteksi AI... Mohon tunggu."
+      };
+    }
+  }
+
+  private handleAIAnalysisComplete(aiResult: { isAI: boolean; confidence: number }): SuperleeResponse {
+    if (!this.context.registerData) {
+      this.context.registerData = {};
+    }
+
+    this.context.registerData.aiDetected = aiResult.isAI;
+    this.context.registerData.aiConfidence = aiResult.confidence;
+
+    let response = `✅ Analisis AI selesai!\n\n`;
+
+    if (aiResult.isAI) {
+      response += `🤖 Hasil: Gambar ini dibuat oleh AI (confidence: ${(aiResult.confidence * 100).toFixed(1)}%)\n\n⚠️ Catatan: Opsi lisensi "AI Training Allowed" tidak akan tersedia untuk konten buatan AI.`;
+    } else {
+      response += `👨‍🎨 Hasil: Gambar ini dibuat secara manual/asli (confidence: ${((1 - aiResult.confidence) * 100).toFixed(1)}%)\n\n✅ Semua opsi lisensi tersedia untuk konten ini.`;
     }
 
     this.context.state = "register_awaiting_name";
     return {
-      type: "awaiting_input",
-      prompt: "What's the name of your IP?"
+      type: "message",
+      text: response,
+      buttons: ["Lanjutkan Registrasi"]
     };
   }
 
