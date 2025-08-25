@@ -106,16 +106,10 @@ Note: AI-generated images cannot be licensed for AI training purposes - it doesn
       // Update loading message to show error
       const errorText = "❌ Sorry, I couldn't analyze the image. But don't worry, you can still proceed with registration!";
 
-      if (loadingMessageIndex !== null) {
-        chatAgent.messages[loadingMessageIndex] = {
-          ...chatAgent.messages[loadingMessageIndex],
-          text: errorText,
-          isLoading: false
-        };
-        setLoadingMessageIndex(null);
-      } else {
-        chatAgent.addMessage("agent", errorText);
-      }
+      chatAgent.updateLastMessage({
+        text: errorText,
+        isLoading: false
+      });
 
       // Continue with file upload even if AI detection fails
       chatAgent.processPrompt("AI analysis completed", currentFile, { isAI: false, confidence: 0 });
