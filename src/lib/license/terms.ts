@@ -278,3 +278,6 @@ export function hasRevenueSharing(pilType: LicenseType): boolean {
 export function hasFreeLicense(pilType: LicenseType): boolean {
   return LICENSE_DESCRIPTIONS[pilType].features.some(feature => feature === 'Free license');
 }
+): boolean {
+  return LICENSE_DESCRIPTIONS[pilType].features.some(feature => feature === 'Free license');
+}
