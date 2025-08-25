@@ -164,7 +164,7 @@ NFT Metadata: ${result.nftMetadataUrl}
 
           {/* Composer */}
           <Composer
-            onSubmit={chatAgent.processPrompt}
+            onSubmit={(prompt) => chatAgent.processPrompt(prompt)}
             status={chatAgent.status}
           />
         </section>
