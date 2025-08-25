@@ -57,7 +57,7 @@ export function useRegisterIPAgent() {
       const imageUpload = await uploadFile(compressedFile);
       const imageCid = extractCid(imageUpload.cid || imageUpload.url);
       const imageGateway = toHttps(imageCid);
-      const imageHash = await sha256HexOfFile(compressedFile);
+      const imageHash = await keccakOfFile(compressedFile);
 
       setRegisterState(prev => ({
         ...prev,
