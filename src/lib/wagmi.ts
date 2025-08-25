@@ -18,29 +18,34 @@ const rpcUrl =
   storyAeneid.rpcUrls?.default?.http?.[0] ||
   "https://aeneid.storyrpc.io";
 
-// ✅ RainbowKit v2: pass fungsi wallet (CreateWalletFn), bukan hasil pemanggilan
-const connectors = connectorsForWallets(
-  [
-    {
-      groupName: "Recommended",
-      wallets: [
-        injectedWallet,
-        rabbyWallet,
-        coinbaseWallet,
-        walletConnectWallet,
-      ],
-    },
-  ],
-  {
-    appName: "Superlee AI Agent",
-    projectId,
-  }
-);
+// Create connectors function that only runs on client-side
+function createConnectors() {
+  // Only create WalletConnect if we're in browser environment
+  const wallets = [injectedWallet, rabbyWallet, coinbaseWallet];
 
-// Wagmi config
+  // Only add WalletConnect on client-side to prevent SSR issues
+  if (typeof window !== 'undefined') {
+    wallets.push(walletConnectWallet);
+  }
+
+  return connectorsForWallets(
+    [
+      {
+        groupName: "Recommended",
+        wallets,
+      },
+    ],
+    {
+      appName: "Superlee AI Agent",
+      projectId,
+    }
+  );
+}
+
+// Wagmi config with client-side connector initialization
 export const wagmiConfig = createConfig({
   chains: [storyAeneid],
-  connectors,
+  connectors: createConnectors(),
   transports: {
     [storyAeneid.id]: http(rpcUrl),
   },
