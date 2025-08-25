@@ -77,7 +77,7 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
 
         return (
           <div
-            key={index}
+            key={`${message.ts}-${message.role}-${index}`}
             className={`message-enter ${index === messages.length - 1 ? 'animate-slide-up' : ''}`}
             style={{
               animationDelay: index === messages.length - 1 ? '0ms' : `${index * 100}ms`
