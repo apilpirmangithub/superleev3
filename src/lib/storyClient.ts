@@ -5,21 +5,18 @@ import { useWalletClient } from "wagmi";
 import { custom } from "viem";
 import { StoryClient, type StoryConfig } from "@story-protocol/core-sdk";
 
-/**
- * Story SDK terikat ke chain Aeneid (testnet).
- * Saat production, ganti chainId ke "mainnet" + RPC yang sesuai.
- */
 export function useStoryClient() {
   const { data: wallet } = useWalletClient();
 
   const client = useMemo(() => {
     if (!wallet) return null;
 
+    const chainId = process.env.NEXT_PUBLIC_STORY_CHAIN_ID || "aeneid";
+
     const cfg: StoryConfig = {
-      // penting: pakai account + transport dari wagmi
       account: wallet.account,
       transport: custom(wallet.transport),
-      chainId: "aeneid", // "mainnet" saat rilis
+      chainId: chainId as "aeneid" | "mainnet",
     } as any;
 
     return StoryClient.newClient(cfg);
