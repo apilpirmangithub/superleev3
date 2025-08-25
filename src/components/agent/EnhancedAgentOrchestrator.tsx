@@ -53,7 +53,7 @@ export function EnhancedAgentOrchestrator() {
     setAiDetectionResult(null);
 
     // Add immediate message when starting analysis
-    chatAgent.addMessage("agent", "tunggu dulu aku akan analisa gambar mu ai atau asli");
+    chatAgent.addMessage("agent", "Wait a moment, let me analyze if your image is AI generated or real...");
 
     // Store file reference before removing preview
     const currentFile = fileUpload.file;
@@ -71,7 +71,17 @@ export function EnhancedAgentOrchestrator() {
         ...result,
         status: 'completed'
       });
-      
+
+      // Show detection results
+      const detectionMessage = `🔍 Analysis Complete!
+
+Result: ${result.isAI ? '🤖 AI Generated' : '✅ Real/Human-made'}
+Confidence: ${((result.confidence || 0) * 100).toFixed(1)}%
+
+${result.isAI ? 'This image appears to be AI-generated.' : 'This image appears to be real/human-made.'}`;
+
+      chatAgent.addMessage("agent", detectionMessage);
+
       // Process the AI detection result with Superlee engine
       chatAgent.processPrompt("AI analysis completed", currentFile, result);
     } catch (error) {
@@ -81,6 +91,10 @@ export function EnhancedAgentOrchestrator() {
         confidence: 0,
         status: 'failed'
       });
+
+      // Show error message
+      chatAgent.addMessage("agent", "❌ Sorry, I couldn't analyze the image. But don't worry, you can still proceed with registration!");
+
       // Continue with file upload even if AI detection fails
       chatAgent.processPrompt("AI analysis completed", currentFile, { isAI: false, confidence: 0 });
     } finally {
