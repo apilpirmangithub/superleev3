@@ -77,7 +77,7 @@ export function EnhancedAgentOrchestrator() {
         status: 'failed'
       });
       // Continue with file upload even if AI detection fails
-      chatAgent.processPrompt("AI analysis completed", fileUpload.file, { isAI: false, confidence: 0 });
+      chatAgent.processPrompt("AI analysis completed", undefined, { isAI: false, confidence: 0 });
     } finally {
       setIsAnalyzing(false);
     }
