@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState } from "react";
 import Image from "next/image";
 import { useAccount } from "wagmi";
 import { Send } from "lucide-react";
-import { useFileUpload } from "@/hooks/useFileUpload";
 
 interface ComposerProps {
   onSubmit: (prompt: string) => void;
