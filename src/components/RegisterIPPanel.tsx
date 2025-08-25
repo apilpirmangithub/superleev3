@@ -237,7 +237,7 @@ export function RegisterIPPanel({ onRegister, className = "" }: RegisterIPPanelP
           <div className="text-sm space-y-1 text-white/70">
             <p>• <strong>File:</strong> {fileUpload.file.name}</p>
             <p>• <strong>Judul:</strong> {title}</p>
-            <p>• <strong>Deteksi AI:</strong> {aiDetectionResult.isAI ? 'Terdeteksi AI' : 'Original'} ({(aiDetectionResult.confidence * 100).toFixed(1)}%)</p>
+            <p>• <strong>Deteksi AI:</strong> {aiDetectionResult.isAI ? 'Terdeteksi AI' : 'Original'} ({((aiDetectionResult.confidence || 0) * 100).toFixed(1)}%)</p>
             <p>• <strong>Lisensi:</strong> {selectedLicense.pilType}</p>
             <p>• <strong>Komersial:</strong> {selectedLicense.commercialUse ? 'Ya' : 'Tidak'}</p>
           </div>
