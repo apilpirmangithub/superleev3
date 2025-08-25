@@ -66,29 +66,21 @@ const RE_AMOUNT = /(\d[\d.,]*)/;
 
 /** ===== License Options ===== */
 function getLicenseOptions(aiDetected: boolean = false): string[] {
-  const options = [
+  return [
+    "Open",
     "Remix Allowed",
-    "Commercial Use Allowed", 
-    "Non-Commercial"
+    "Commercial"
   ];
-  
-  if (!aiDetected) {
-    options.push("AI Training Allowed");
-  }
-  
-  return options;
 }
 
 function licenseToCode(license: string): { license: string; pilType: string } {
   switch (license) {
+    case "Open":
+      return { license: "cc0", pilType: "open_use" };
     case "Remix Allowed":
       return { license: "by", pilType: "commercial_remix" };
-    case "Commercial Use Allowed":
+    case "Commercial":
       return { license: "arr", pilType: "commercial_use" };
-    case "Non-Commercial":
-      return { license: "by-nc", pilType: "non_commercial_remix" };
-    case "AI Training Allowed":
-      return { license: "cc0", pilType: "open_use" };
     default:
       return { license: "by", pilType: "commercial_remix" };
   }
