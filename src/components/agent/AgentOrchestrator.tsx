@@ -6,6 +6,8 @@ import { useChatAgent } from "@/hooks/useChatAgent";
 import { useSwapAgent } from "@/hooks/useSwapAgent";
 import { useRegisterIPAgent } from "@/hooks/useRegisterIPAgent";
 import { useFileUpload } from "@/hooks/useFileUpload";
+import { DEFAULT_LICENSE_SETTINGS } from "@/lib/license/terms";
+import type { LicenseSettings } from "@/lib/license/terms";
 import { MessageList } from "./MessageList";
 import { Composer } from "./Composer";
 import { PlanBox } from "./PlanBox";
@@ -71,7 +73,13 @@ Tx: ${result.txHash}
 
       chatAgent.updateStatus("📝 Registering IP...");
 
-      const result = await registerAgent.executeRegister(plan.intent, fileUpload.file);
+      // Create license settings based on intent
+      const licenseSettings: LicenseSettings = {
+        ...DEFAULT_LICENSE_SETTINGS,
+        pilType: plan.intent.pilType || 'non_commercial_remix',
+      };
+
+      const result = await registerAgent.executeRegister(plan.intent, fileUpload.file, licenseSettings);
       
       if (result.success) {
         // Show initial success with transaction link
