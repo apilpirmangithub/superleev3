@@ -175,9 +175,25 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
     aiDetectionResult
   ]);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const handleButtonClick = useCallback((buttonText: string) => {
-    chatAgent.processPrompt(buttonText);
+    if (buttonText === "Upload File") {
+      // Trigger file input
+      fileInputRef.current?.click();
+    } else {
+      chatAgent.processPrompt(buttonText);
+    }
   }, [chatAgent]);
+
+  const handleFileInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      fileUpload.handleFileSelect(file);
+      // Reset input for re-selection of same file
+      event.target.value = '';
+    }
+  }, [fileUpload]);
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 md:px-6 overflow-x-hidden">
@@ -244,8 +260,17 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
         </div>
       </div>
 
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileInputChange}
+        style={{ display: 'none' }}
+      />
+
       {/* Toast Notifications */}
-      <Toast 
+      <Toast
         message={toast}
         onClose={() => setToast(null)}
       />
