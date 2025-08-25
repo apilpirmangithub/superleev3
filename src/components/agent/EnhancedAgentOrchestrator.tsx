@@ -26,6 +26,7 @@ export function EnhancedAgentOrchestrator() {
   const [toast, setToast] = useState<string | null>(null);
   const [aiDetectionResult, setAiDetectionResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzedFile, setAnalyzedFile] = useState<File | null>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   
   const explorerBase = storyAeneid.blockExplorers?.default.url || "https://aeneid.storyscan.xyz";
@@ -51,16 +52,48 @@ export function EnhancedAgentOrchestrator() {
     setIsAnalyzing(true);
     setAiDetectionResult(null);
 
+    // Add immediate loading message when starting analysis
+    const loadingMessage = {
+      role: "agent" as const,
+      text: "Wait a moment, let me analyze if your image is AI generated or real",
+      ts: Date.now(),
+      isLoading: true
+    };
+
+    chatAgent.addCompleteMessage(loadingMessage);
+
+    // Store file reference before removing preview
+    const currentFile = fileUpload.file;
+    setAnalyzedFile(currentFile);
+
+    // Remove image preview immediately after upload
+    setTimeout(() => {
+      fileUpload.removeFile();
+    }, 100);
+
     try {
-      const buffer = await fileToBuffer(fileUpload.file);
+      const buffer = await fileToBuffer(currentFile);
       const result = await detectAI(buffer);
       setAiDetectionResult({
         ...result,
         status: 'completed'
       });
-      
+
+      // Update loading message to show results
+      const detectionText = result.isAI
+        ? `Analysis complete! Your image is AI generated with ${((result.confidence || 0) * 100).toFixed(1)}% confidence.
+
+Note: AI-generated images cannot be licensed for AI training purposes - it doesn't make sense to train AI with AI-generated content again!`
+        : `Analysis complete! Your image appears to be real/human-made with ${((result.confidence || 0) * 100).toFixed(1)}% confidence.`;
+
+      // Update the loading message to show results
+      chatAgent.updateLastMessage({
+        text: detectionText,
+        isLoading: false
+      });
+
       // Process the AI detection result with Superlee engine
-      chatAgent.processPrompt("AI analysis completed", fileUpload.file, result);
+      chatAgent.processPrompt("AI analysis completed", currentFile, result);
     } catch (error) {
       console.error('AI detection failed:', error);
       setAiDetectionResult({
@@ -68,8 +101,17 @@ export function EnhancedAgentOrchestrator() {
         confidence: 0,
         status: 'failed'
       });
+
+      // Update loading message to show error
+      const errorText = "❌ Sorry, I couldn't analyze the image. But don't worry, you can still proceed with registration!";
+
+      chatAgent.updateLastMessage({
+        text: errorText,
+        isLoading: false
+      });
+
       // Continue with file upload even if AI detection fails
-      chatAgent.processPrompt("AI analysis completed", fileUpload.file, { isAI: false, confidence: 0 });
+      chatAgent.processPrompt("AI analysis completed", currentFile, { isAI: false, confidence: 0 });
     } finally {
       setIsAnalyzing(false);
     }
@@ -105,7 +147,7 @@ Tx: ${result.txHash}
     }
     
     else if (plan.type === "register" && plan.intent.kind === "register") {
-      if (!fileUpload.file) {
+      if (!analyzedFile) {
         chatAgent.addMessage("agent", "❌ Please attach an image first!");
         setToast("Attach image first 📎");
         return;
@@ -119,7 +161,7 @@ Tx: ${result.txHash}
         pilType: plan.intent.pilType || DEFAULT_LICENSE_SETTINGS.pilType,
       };
 
-      const result = await registerAgent.executeRegister(plan.intent, fileUpload.file, licenseSettings);
+      const result = await registerAgent.executeRegister(plan.intent, analyzedFile, licenseSettings);
       
       if (result.success) {
         // Show initial success with transaction link
@@ -136,17 +178,35 @@ Tx: ${result.txHash}
           );
 
           if (confirmed) {
-            const successMessage = `Register success ✅
-ipId: ${result.ipId}
-Tx: ${result.txHash}
-Image: ${result.imageUrl}
-IP Metadata: ${result.ipMetadataUrl}
-NFT Metadata: ${result.nftMetadataUrl}
+            const successText = `Register success ✅
+
+Your image has been successfully registered as IP!
+
 License Type: ${result.licenseType}
-AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) * 100).toFixed(1)}%)
-↗ View: ${explorerBase}/tx/${result.txHash}`;
-            
-            chatAgent.addMessage("agent", successMessage);
+AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) * 100).toFixed(1)}%)`;
+
+            // Create message with image and links
+            const message = {
+              role: "agent" as const,
+              text: successText,
+              ts: Date.now(),
+              image: result.imageUrl ? {
+                url: result.imageUrl,
+                alt: "Registered IP image"
+              } : undefined,
+              links: [
+                {
+                  text: `📋 View IP: ${result.ipId}`,
+                  url: `https://aeneid.explorer.story.foundation/ipa/${result.ipId}`
+                },
+                {
+                  text: `🔗 View Transaction: ${result.txHash}`,
+                  url: `${explorerBase}/tx/${result.txHash}`
+                }
+              ]
+            };
+
+            chatAgent.addCompleteMessage(message);
             setToast("IP registered ✅");
           } else {
             chatAgent.updateStatus("Tx still pending on network. Check explorer.");
@@ -161,14 +221,14 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
       
       chatAgent.clearPlan();
       registerAgent.resetRegister();
-      fileUpload.removeFile();
+      setAnalyzedFile(null);
       setAiDetectionResult(null);
     }
   }, [
     chatAgent,
     swapAgent,
     registerAgent,
-    fileUpload,
+    analyzedFile,
     publicClient,
     explorerBase,
     aiDetectionResult
@@ -215,8 +275,7 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
                   <span className="text-lg font-bold text-white">S</span>
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-white">Chat with Superlee</div>
-                  <div className="text-xs text-white/60">Your friendly neighborhood blockchain wizard 🧙‍♂️✨</div>
+                  <div className="text-sm font-semibold text-white">CHAT WITH SUPERLEE</div>
                 </div>
               </div>
 

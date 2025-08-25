@@ -6,6 +6,15 @@ export type Message = {
   text: string;
   ts: number;
   buttons?: string[];
+  image?: {
+    url: string;
+    alt?: string;
+  };
+  links?: {
+    text: string;
+    url: string;
+  }[];
+  isLoading?: boolean;
 };
 
 // Plan types

@@ -33,7 +33,7 @@ function TypingIndicator() {
         </div>
         <div className="flex-1">
           <div className="text-xs text-white/50 font-medium mb-1">
-            Chat with Superlee
+            SUPERLEE
           </div>
           <div className="bg-white/8 border border-white/10 rounded-2xl rounded-tl-md px-4 py-3 shadow-sm hover-glow transition-smooth">
             <div className="flex items-center gap-1">
@@ -59,13 +59,10 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
           <Bot className="h-8 w-8 text-white" />
         </div>
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-white mb-2">Chat with Superlee</h3>
+          <h3 className="text-lg font-semibold text-white mb-2">SUPERLEE</h3>
           <p className="text-sm text-white/60 max-w-md">
-            Your crypto companion is ready to help! 🚀 I can swap your tokens faster than you can say "blockchain" or help you register IP like a digital notary! 📝
-          </p>
-          <div className="mt-4 text-xs text-white/40">
             Psst... just type "SUP" to wake me up! 😉
-          </div>
+          </p>
         </div>
       </div>
     );
@@ -110,7 +107,7 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
                   {/* Sender name (only for agent) */}
                   {!isUser && (
                     <div className="text-xs text-white/50 font-medium">
-                      Chat with Superlee
+                      SUPERLEE
                     </div>
                   )}
 
@@ -123,9 +120,52 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
                         ? "bg-gradient-to-br from-sky-500 to-sky-600 text-white rounded-br-md border border-sky-400/30 hover:from-sky-400 hover:to-sky-500"
                         : "bg-white/8 border border-white/10 text-white rounded-tl-md hover:bg-white/12 hover:border-white/20"
                     }`}>
-                      <pre className="whitespace-pre-wrap text-sm break-words font-sans leading-relaxed">
-                        {message.text}
-                      </pre>
+                      <div className="text-sm break-words font-sans leading-relaxed">
+                        {message.isLoading ? (
+                          <div className="flex items-center gap-2">
+                            <span>{message.text}</span>
+                            <div className="flex gap-1">
+                              <div className="w-1 h-1 bg-white/60 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                              <div className="w-1 h-1 bg-white/60 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                              <div className="w-1 h-1 bg-white/60 rounded-full animate-bounce"></div>
+                            </div>
+                          </div>
+                        ) : (
+                          <pre className="whitespace-pre-wrap">
+                            {message.text}
+                          </pre>
+                        )}
+                      </div>
+
+                      {/* Image display */}
+                      {message.image && (
+                        <div className="mt-3">
+                          <img
+                            src={message.image.url}
+                            alt={message.image.alt || "Registered image"}
+                            className="max-w-full h-auto rounded-lg border border-white/20"
+                            style={{ maxHeight: '200px' }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Links display */}
+                      {message.links && message.links.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          {message.links.map((link, linkIndex) => (
+                            <div key={linkIndex}>
+                              <a
+                                href={link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sky-300 hover:text-sky-200 underline decoration-sky-300/50 hover:decoration-sky-200 transition-colors"
+                              >
+                                {link.text}
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Message status for user messages */}

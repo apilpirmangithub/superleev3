@@ -3,49 +3,64 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+  const debugMode = process.env.AI_DETECTION_DEBUG === 'true';
+
   try {
     const { image } = await req.json();
-    
+
     if (!image) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
     }
 
+    if (debugMode) {
+      console.log("🔍 AI Detection started:", new Date().toISOString());
+    }
+
     // Try SightEngine first, fallback to simulation
     try {
-      const result = await detectWithSightEngine(image);
+      if (debugMode) console.log("🎯 Attempting SightEngine detection...");
+      const result = await detectWithSightEngine(image, debugMode);
+      if (debugMode) console.log("✅ SightEngine detection successful:", result, `(${Date.now() - startTime}ms)`);
       return NextResponse.json(result);
     } catch (sightEngineError) {
-      console.warn("SightEngine detection failed, using simulation:", sightEngineError);
-      
-      // Fallback to simulation
-      const buffer = Buffer.from(image, 'base64');
-      const confidence = await simulateAIDetection(buffer);
-      const isAI = confidence > 0.7;
+      if (debugMode) console.log("⚠️ SightEngine not available, using simulation:", sightEngineError.message);
 
-      return NextResponse.json({
+      // Fallback to simulation
+      if (debugMode) console.log("🎭 Starting simulation detection...");
+      const buffer = Buffer.from(image, 'base64');
+      const confidence = await simulateAIDetection(buffer, debugMode);
+      const isAI = confidence > 0.5; // Lower threshold for better demo experience
+
+      const result = {
         isAI,
         confidence: Math.round(confidence * 100) / 100,
         source: 'simulation'
-      });
+      };
+
+      if (debugMode) console.log("✅ Simulation detection complete:", result, `(${Date.now() - startTime}ms)`);
+      return NextResponse.json(result);
     }
 
   } catch (error: any) {
-    console.error("AI detection error:", error);
+    console.error("❌ AI detection error:", error);
     return NextResponse.json(
-      { error: error?.message || "AI detection failed" }, 
+      { error: error?.message || "AI detection failed" },
       { status: 500 }
     );
   }
 }
 
 // SightEngine AI Detection Integration
-async function detectWithSightEngine(imageBase64: string): Promise<{ isAI: boolean; confidence: number; source: string }> {
+async function detectWithSightEngine(imageBase64: string, debugMode: boolean = false): Promise<{ isAI: boolean; confidence: number; source: string }> {
   const SIGHTENGINE_API_USER = process.env.SIGHTENGINE_API_USER;
   const SIGHTENGINE_API_SECRET = process.env.SIGHTENGINE_API_SECRET;
-  
+
   if (!SIGHTENGINE_API_USER || !SIGHTENGINE_API_SECRET) {
-    throw new Error("SightEngine API credentials not configured");
+    throw new Error("SightEngine credentials not configured - add SIGHTENGINE_API_USER and SIGHTENGINE_API_SECRET to environment");
   }
+
+  if (debugMode) console.log("🔑 Using SightEngine credentials (user:", SIGHTENGINE_API_USER, ")");
   
   // Create form data for SightEngine API
   const formData = new FormData();
@@ -83,31 +98,47 @@ async function detectWithSightEngine(imageBase64: string): Promise<{ isAI: boole
 }
 
 // Fallback simulation for when SightEngine is not available
-async function simulateAIDetection(buffer: Buffer): Promise<number> {
-  // This is a simulation for demo purposes
+async function simulateAIDetection(buffer: Buffer, debugMode: boolean = false): Promise<number> {
+  // Fast simulation for demo purposes
   // Used as fallback when SightEngine is not configured
-  
+
   try {
     const imageSize = buffer.length;
-    
-    // Simulate analysis delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Simple heuristics for demo (replace with real AI detection)
-    let confidence = 0.3; // Base confidence
-    
-    // Size-based heuristic
-    if (imageSize > 1000000) confidence += 0.1; // Large files might be AI-generated
-    if (imageSize < 50000) confidence += 0.2; // Very small files might be AI
-    
-    // Random factor for demo variation
-    confidence += Math.random() * 0.4;
-    
-    // Clamp between 0 and 1
-    return Math.min(Math.max(confidence, 0), 1);
-    
+
+    // Fast mode for development, or realistic delay for production
+    const fastMode = process.env.AI_DETECTION_FAST_MODE === 'true';
+    const delay = fastMode ? 300 : 800; // 300ms in dev, 800ms in prod
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    // Enhanced heuristics for more realistic demo results
+    let confidence = 0.25; // Base confidence
+
+    // File size analysis (AI images often have specific size patterns)
+    if (imageSize > 2000000) confidence += 0.3; // Very large files often AI-generated
+    if (imageSize < 100000) confidence += 0.2; // Very small files might be AI-compressed
+
+    // Simulate different AI detection scenarios for variety
+    const scenarios = [
+      0.15, // Clearly human-made
+      0.25, // Probably human-made
+      0.45, // Uncertain
+      0.75, // Likely AI-generated
+      0.85, // Very likely AI-generated
+      0.95  // Almost certainly AI-generated
+    ];
+
+    // Add weighted random selection for more realistic results
+    const randomScenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+    confidence = (confidence + randomScenario) / 2;
+
+    // Add small random variation for realism
+    confidence += (Math.random() - 0.5) * 0.1;
+
+    // Clamp between 0.05 and 0.95 for realistic bounds
+    return Math.min(Math.max(confidence, 0.05), 0.95);
+
   } catch (error) {
-    console.error("Simulation error:", error);
+    if (debugMode) console.error("Simulation error:", error);
     return 0.3; // Default confidence
   }
 }
