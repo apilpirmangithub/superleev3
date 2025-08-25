@@ -52,10 +52,12 @@ export async function POST(req: NextRequest) {
 async function detectWithSightEngine(imageBase64: string): Promise<{ isAI: boolean; confidence: number; source: string }> {
   const SIGHTENGINE_API_USER = process.env.SIGHTENGINE_API_USER;
   const SIGHTENGINE_API_SECRET = process.env.SIGHTENGINE_API_SECRET;
-  
+
   if (!SIGHTENGINE_API_USER || !SIGHTENGINE_API_SECRET) {
-    throw new Error("SightEngine API credentials not configured");
+    throw new Error("SightEngine credentials not configured - add SIGHTENGINE_API_USER and SIGHTENGINE_API_SECRET to environment");
   }
+
+  console.log("🔑 Using SightEngine credentials (user:", SIGHTENGINE_API_USER, ")");
   
   // Create form data for SightEngine API
   const formData = new FormData();
