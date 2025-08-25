@@ -120,9 +120,22 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
                         ? "bg-gradient-to-br from-sky-500 to-sky-600 text-white rounded-br-md border border-sky-400/30 hover:from-sky-400 hover:to-sky-500"
                         : "bg-white/8 border border-white/10 text-white rounded-tl-md hover:bg-white/12 hover:border-white/20"
                     }`}>
-                      <pre className="whitespace-pre-wrap text-sm break-words font-sans leading-relaxed">
-                        {message.text}
-                      </pre>
+                      <div className="text-sm break-words font-sans leading-relaxed">
+                        {message.isLoading ? (
+                          <div className="flex items-center gap-2">
+                            <span>{message.text}</span>
+                            <div className="flex gap-1">
+                              <div className="w-1 h-1 bg-white/60 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                              <div className="w-1 h-1 bg-white/60 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                              <div className="w-1 h-1 bg-white/60 rounded-full animate-bounce"></div>
+                            </div>
+                          </div>
+                        ) : (
+                          <pre className="whitespace-pre-wrap">
+                            {message.text}
+                          </pre>
+                        )}
+                      </div>
 
                       {/* Image display */}
                       {message.image && (
