@@ -63,13 +63,11 @@ export function PlanBox({ plan, onConfirm, onCancel, swapState, registerState }:
 
   return (
     <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-      <div className="text-sm opacity-70 mb-2">Plan</div>
-      
-      <ol className="list-decimal pl-5 space-y-1 text-sm">
+      <div className="space-y-1 text-sm">
         {plan.steps.map((step, index) => (
-          <li key={index}>{step}</li>
+          <div key={index}>{step}</div>
         ))}
-      </ol>
+      </div>
 
       {/* Progress indicator */}
       {isExecuting && (

@@ -113,13 +113,7 @@ export function useChatAgent() {
           intent: response.intent,
         });
 
-        // Show plan to user
-        const planText = [
-          "Plan:",
-          ...response.plan.map((step: string, i: number) => `${i + 1}. ${step}`)
-        ].join("\n");
-
-        addMessage("agent", planText);
+        // Plan will be shown in PlanBox only, no need for chat message
       }
     });
   }, [addMessage, simulateTyping]);
