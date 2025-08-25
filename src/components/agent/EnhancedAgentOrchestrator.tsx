@@ -62,7 +62,6 @@ export function EnhancedAgentOrchestrator() {
     };
 
     chatAgent.addCompleteMessage(loadingMessage);
-    setLoadingMessageIndex(chatAgent.messages.length); // Store index for later update
 
     // Store file reference before removing preview
     const currentFile = fileUpload.file;
