@@ -1,17 +1,34 @@
 import React, { useRef, useEffect, useState } from "react";
 import Image from "next/image";
 import { useAccount } from "wagmi";
-import { Send } from "lucide-react";
+import { Send, Paperclip, X, Image as ImageIcon, Smile } from "lucide-react";
 
 interface ComposerProps {
   onSubmit: (prompt: string) => void;
   status?: string;
+  file?: File | null;
+  onFileSelect?: (file: File) => void;
+  onFileRemove?: () => void;
+  previewUrl?: string | null;
+  isTyping?: boolean;
 }
 
-export function Composer({ onSubmit, status }: ComposerProps) {
+const EMOJI_SUGGESTIONS = ["👋", "😊", "🚀", "💎", "⚡", "🎯", "🔥", "✨"];
+
+export function Composer({
+  onSubmit,
+  status,
+  file,
+  onFileSelect,
+  onFileRemove,
+  previewUrl,
+  isTyping
+}: ComposerProps) {
   const { isConnected } = useAccount();
   const [prompt, setPrompt] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAutoGrow = (element: HTMLTextAreaElement) => {
     element.style.height = "auto";
@@ -26,73 +43,196 @@ export function Composer({ onSubmit, status }: ComposerProps) {
 
   const handleSubmit = () => {
     const trimmedPrompt = prompt.trim();
-    if (!trimmedPrompt || !isConnected) return;
-    
-    onSubmit(trimmedPrompt);
+    if ((!trimmedPrompt && !file) || !isConnected || isTyping) return;
+
+    onSubmit(trimmedPrompt || "[File uploaded]");
     setPrompt("");
-    
+    setShowEmojiPicker(false);
+
     // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
   };
 
-  const canSend = isConnected && prompt.trim().length > 0;
+  const handleFileClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile && onFileSelect) {
+      onFileSelect(selectedFile);
+    }
+    // Reset input value to allow re-selecting the same file
+    e.target.value = '';
+  };
+
+  const addEmoji = (emoji: string) => {
+    setPrompt(prev => prev + emoji);
+    setShowEmojiPicker(false);
+    textareaRef.current?.focus();
+  };
+
+  const canSend = isConnected && (prompt.trim().length > 0 || file) && !isTyping;
 
   return (
-    <div className="shrink-0 border-t border-white/10 bg-gradient-to-t from-black/20 to-transparent card relative overflow-visible">
-      <div className="mx-auto w-full max-w-[820px] px-3 py-3">
-        <div className="relative flex items-end gap-2 rounded-2xl ring-1 ring-white/15 bg-white/5/30 backdrop-blur-md px-3 py-2 overflow-visible">
+    <div className="shrink-0 border-t border-white/10 bg-gradient-to-t from-black/20 to-transparent relative overflow-visible">
+      <div className="mx-auto w-full max-w-[820px] px-3 py-4">
+        {/* File Preview */}
+        {file && previewUrl && (
+          <div className="mb-3 p-3 rounded-2xl bg-white/8 border border-white/15 backdrop-blur-sm">
+            <div className="flex items-start gap-3">
+              <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0">
+                <Image
+                  src={previewUrl}
+                  alt="Preview"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-white truncate">
+                  {file.name}
+                </div>
+                <div className="text-xs text-white/60">
+                  {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type}
+                </div>
+              </div>
+              <button
+                onClick={onFileRemove}
+                className="p-1 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
-          {/* Textarea */}
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            className="flex-1 resize-none rounded-md bg-transparent px-2 py-2 text-base sm:text-lg placeholder:opacity-50 focus:outline-none scrollbar-invisible"
-            placeholder='Reply to Superlee Assistant...'
-            value={prompt}
-            onChange={(e) => {
-              setPrompt(e.target.value);
-              handleAutoGrow(e.currentTarget);
-            }}
-            onKeyDown={(e) =>
-              e.key === "Enter" && (e.ctrlKey || e.metaKey) && handleSubmit()
-            }
+        {/* Input Area */}
+        <div className="relative">
+          <div className="flex items-end gap-2 rounded-2xl ring-1 ring-white/15 bg-white/8 backdrop-blur-md px-3 py-2 overflow-visible transition-all duration-200 hover:ring-white/25 focus-within:ring-sky-400/50 focus-within:ring-2">
+
+            {/* Attachment Button */}
+            <button
+              onClick={handleFileClick}
+              className="p-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-colors shrink-0"
+              title="Attach image"
+            >
+              <Paperclip className="h-5 w-5" />
+            </button>
+
+            {/* Textarea */}
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              className="flex-1 resize-none bg-transparent px-2 py-2 text-base placeholder:opacity-50 focus:outline-none scrollbar-invisible"
+              placeholder={file ? "Add a message..." : "Message Superlee Assistant..."}
+              value={prompt}
+              onChange={(e) => {
+                setPrompt(e.target.value);
+                handleAutoGrow(e.currentTarget);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
+              disabled={isTyping}
+            />
+
+            {/* Emoji Button */}
+            <div className="relative">
+              <button
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="p-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-colors shrink-0"
+                title="Add emoji"
+              >
+                <Smile className="h-5 w-5" />
+              </button>
+
+              {/* Emoji Picker */}
+              {showEmojiPicker && (
+                <div className="absolute bottom-full right-0 mb-2 p-3 bg-white/10 backdrop-blur-md border border-white/15 rounded-xl shadow-xl z-50">
+                  <div className="grid grid-cols-4 gap-2">
+                    {EMOJI_SUGGESTIONS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        onClick={() => addEmoji(emoji)}
+                        className="p-2 rounded-lg hover:bg-white/10 text-lg transition-colors"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Send button */}
+            <button
+              className={`relative z-10 p-2 rounded-xl transition-all duration-200 disabled:cursor-not-allowed shrink-0 ${
+                canSend
+                  ? "bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-400 hover:to-blue-400 text-white shadow-lg hover:shadow-xl hover:scale-105"
+                  : "bg-white/10 text-white/50"
+              }`}
+              onClick={handleSubmit}
+              disabled={!canSend}
+              title={
+                !isConnected
+                  ? "Connect wallet to send"
+                  : isTyping
+                  ? "Assistant is typing..."
+                  : (!prompt.trim() && !file)
+                  ? "Type a message or attach a file"
+                  : "Send (Enter or Ctrl/⌘+Enter)"
+              }
+            >
+              <Send className="h-5 w-5" />
+            </button>
+
+            {/* Sprite mascot */}
+            <Image
+              src="/brand/superlee-sprite.png"
+              alt=""
+              width={48}
+              height={48}
+              priority
+              className="pointer-events-none select-none pixelated animate-float absolute -top-3 -right-3 w-12 h-12 z-20 drop-shadow-[0_10px_28px_rgba(34,211,238,.35)]"
+            />
+          </div>
+
+          {/* File input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
           />
 
-          {/* Send button */}
-          <button
-            className="relative z-10 p-2 rounded-xl bg-sky-500/90 hover:bg-sky-400 text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
-            onClick={handleSubmit}
-            disabled={!canSend}
-            title={
-              !isConnected
-                ? "Connect wallet to send"
-                : !prompt.trim()
-                ? "Type a prompt"
-                : "Send (Ctrl/⌘+Enter)"
-            }
-          >
-            <Send className="h-5 w-5" />
-          </button>
-
-          {/* Sprite mascot */}
-          <Image
-            src="/brand/superlee-sprite.png"
-            alt=""
-            width={48}
-            height={48}
-            priority
-            className="pointer-events-none select-none pixelated animate-float absolute -top-3 -right-3 w-12 h-12 z-20 drop-shadow-[0_10px_28px_rgba(34,211,238,.35)]"
-          />
-        </div>
-
-        {/* Status */}
-        <div className="mt-2">
-          {status && <span className="text-xs opacity-70">{status}</span>}
+          {/* Status and shortcuts */}
+          <div className="mt-2 flex items-center justify-between">
+            <div className="text-xs text-white/50">
+              {status ? (
+                <span>{status}</span>
+              ) : (
+                <span>Press Enter to send • Shift+Enter for new line</span>
+              )}
+            </div>
+            {!isConnected && (
+              <div className="text-xs text-orange-400">
+                Connect wallet to send messages
+              </div>
+            )}
+          </div>
         </div>
       </div>
-
     </div>
   );
 }
