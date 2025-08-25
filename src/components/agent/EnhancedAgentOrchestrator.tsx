@@ -51,6 +51,14 @@ export function EnhancedAgentOrchestrator() {
     setIsAnalyzing(true);
     setAiDetectionResult(null);
 
+    // Add immediate message when starting analysis
+    chatAgent.addMessage("agent", "tunggu dulu aku akan analisa gambar mu ai atau asli");
+
+    // Remove image preview immediately after upload
+    setTimeout(() => {
+      fileUpload.removeFile();
+    }, 100);
+
     try {
       const buffer = await fileToBuffer(fileUpload.file);
       const result = await detectAI(buffer);
@@ -60,7 +68,7 @@ export function EnhancedAgentOrchestrator() {
       });
       
       // Process the AI detection result with Superlee engine
-      chatAgent.processPrompt("AI analysis completed", fileUpload.file, result);
+      chatAgent.processPrompt("AI analysis completed", undefined, result);
     } catch (error) {
       console.error('AI detection failed:', error);
       setAiDetectionResult({
