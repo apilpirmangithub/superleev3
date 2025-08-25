@@ -77,7 +77,7 @@ export function SimpleIPRegister() {
         <p className="text-white/60">Simple, fast, and secure IP registration</p>
       </div>
 
-      {state.status === 'processing' as any ? (
+      {state.status !== 'idle' && state.status !== 'success' && state.status !== 'error' ? (
         <div className="bg-white/5 rounded-2xl p-6 text-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin text-sky-400 mx-auto" />
           <div className="text-white font-medium">{state.step}</div>
@@ -158,7 +158,7 @@ export function SimpleIPRegister() {
           <div className="pt-4">
             <button
               onClick={handleRegister}
-              disabled={!file || !title || state.status !== 'idle'}
+              disabled={!file || !title || (state.status !== 'idle' && state.status !== 'error')}
               className="w-full py-4 bg-sky-500 hover:bg-sky-400 disabled:bg-white/10 disabled:text-white/40 text-white font-medium rounded-2xl transition-colors disabled:cursor-not-allowed"
             >
               Register IP Now
