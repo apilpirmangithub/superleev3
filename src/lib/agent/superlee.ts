@@ -189,14 +189,14 @@ export class SuperleeEngine {
         }
         return {
           type: "message",
-          text: "🔍 Sedang menganalisis gambar untuk deteksi AI..."
+          text: "🔍 Analyzing image for AI detection..."
         };
 
       case "register_awaiting_name":
-        if (message.toLowerCase().includes("lanjutkan") || message.toLowerCase().includes("continue")) {
+        if (message.toLowerCase().includes("continue") || message.toLowerCase().includes("lanjutkan")) {
           return {
             type: "awaiting_input",
-            prompt: "Apa nama IP Anda?"
+            prompt: "What is the name of your IP?"
           };
         }
         return this.handleNameInput(message);
@@ -275,7 +275,7 @@ export class SuperleeEngine {
       this.context.state = "register_analyzing_ai";
       return {
         type: "message",
-        text: "📁 File berhasil diupload!\n\n🔍 Sedang menganalisis gambar untuk deteksi AI... Mohon tunggu."
+        text: "📁 File uploaded successfully!\n\n🔍 Analyzing image for AI detection... Please wait."
       };
     }
   }
@@ -288,19 +288,19 @@ export class SuperleeEngine {
     this.context.registerData.aiDetected = aiResult.isAI;
     this.context.registerData.aiConfidence = aiResult.confidence;
 
-    let response = `✅ Analisis AI selesai!\n\n`;
+    let response = `✅ AI analysis completed!\n\n`;
 
     if (aiResult.isAI) {
-      response += `🤖 Hasil: Gambar ini dibuat oleh AI (confidence: ${(aiResult.confidence * 100).toFixed(1)}%)\n\n⚠️ Catatan: Opsi lisensi "AI Training Allowed" tidak akan tersedia untuk konten buatan AI.`;
+      response += `🤖 Result: This image was created by AI (confidence: ${(aiResult.confidence * 100).toFixed(1)}%)\n\n⚠️ Note: "AI Training Allowed" license option will not be available for AI-generated content.`;
     } else {
-      response += `👨‍🎨 Hasil: Gambar ini dibuat secara manual/asli (confidence: ${((1 - aiResult.confidence) * 100).toFixed(1)}%)\n\n✅ Semua opsi lisensi tersedia untuk konten ini.`;
+      response += `👨‍🎨 Result: This image was created manually/originally (confidence: ${((1 - aiResult.confidence) * 100).toFixed(1)}%)\n\n✅ All license options are available for this content.`;
     }
 
     this.context.state = "register_awaiting_name";
     return {
       type: "message",
       text: response,
-      buttons: ["Lanjutkan Registrasi"]
+      buttons: ["Continue Registration"]
     };
   }
 
