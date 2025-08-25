@@ -5,6 +5,7 @@ export type Message = {
   role: "you" | "agent";
   text: string;
   ts: number;
+  buttons?: string[];
 };
 
 // Plan types
