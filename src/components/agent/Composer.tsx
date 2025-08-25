@@ -106,7 +106,7 @@ export function Composer({
               ref={textareaRef}
               rows={1}
               className="flex-1 resize-none bg-transparent px-2 py-2 text-base placeholder:opacity-50 focus:outline-none scrollbar-invisible"
-              placeholder={file ? "Add a message..." : "Chat with Superlee..."}
+              placeholder={file ? "Add a message..." : "CHAT WITH SUPERLEE..."}
               value={prompt}
               onChange={(e) => {
                 setPrompt(e.target.value);
