@@ -113,11 +113,8 @@ export function useChatAgent() {
           intent: response.intent,
         });
 
-        // Show plan to user
-        const planText = [
-          "Plan:",
-          ...response.plan.map((step: string, i: number) => `${i + 1}. ${step}`)
-        ].join("\n");
+        // Show plan to user - simplified format
+        const planText = response.plan.join("\n");
 
         addMessage("agent", planText);
       }
