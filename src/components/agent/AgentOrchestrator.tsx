@@ -38,11 +38,11 @@ export function AgentOrchestrator() {
 
     const plan = chatAgent.currentPlan;
 
-    if (plan.type === "swap") {
+    if (plan.type === "swap" && plan.intent.kind === "swap") {
       chatAgent.updateStatus("🔄 Executing swap...");
-      
+
       const result = await swapAgent.executeSwap(plan.intent);
-      
+
       if (result.success) {
         const successMessage = `Swap success ✅
 From: ${plan.intent.tokenIn}
@@ -50,7 +50,7 @@ To: ${plan.intent.tokenOut}
 Amount: ${plan.intent.amount}
 Tx: ${result.txHash}
 ↗ View: ${explorerBase}/tx/${result.txHash}`;
-        
+
         chatAgent.addMessage("agent", successMessage);
         setToast("Swap success ✅");
       } else {
