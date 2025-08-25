@@ -14,6 +14,7 @@ export type Message = {
     text: string;
     url: string;
   }[];
+  isLoading?: boolean;
 };
 
 // Plan types
