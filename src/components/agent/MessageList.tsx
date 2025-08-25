@@ -123,6 +123,36 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
                       <pre className="whitespace-pre-wrap text-sm break-words font-sans leading-relaxed">
                         {message.text}
                       </pre>
+
+                      {/* Image display */}
+                      {message.image && (
+                        <div className="mt-3">
+                          <img
+                            src={message.image.url}
+                            alt={message.image.alt || "Registered image"}
+                            className="max-w-full h-auto rounded-lg border border-white/20"
+                            style={{ maxHeight: '200px' }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Links display */}
+                      {message.links && message.links.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          {message.links.map((link, linkIndex) => (
+                            <div key={linkIndex}>
+                              <a
+                                href={link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sky-300 hover:text-sky-200 underline decoration-sky-300/50 hover:decoration-sky-200 transition-colors"
+                              >
+                                {link.text}
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Message status for user messages */}
