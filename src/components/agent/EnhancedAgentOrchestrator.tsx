@@ -181,7 +181,7 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
     chatAgent,
     swapAgent,
     registerAgent,
-    fileUpload,
+    analyzedFile,
     publicClient,
     explorerBase,
     aiDetectionResult
