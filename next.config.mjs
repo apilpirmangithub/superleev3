@@ -37,13 +37,16 @@ const nextConfig = {
       ];
     }
 
-    // Define globals for browser APIs that don't exist in Node.js
-    config.plugins = [
-      ...(config.plugins || []),
-      new config.webpack.DefinePlugin({
+    // Add environment variable for WalletConnect
+    config.plugins = config.plugins || [];
+
+    // Import webpack to use DefinePlugin
+    const webpack = require('webpack');
+    config.plugins.push(
+      new webpack.DefinePlugin({
         'process.env.WC_DISABLE_INTERNAL_STORAGE': JSON.stringify('true'),
-      }),
-    ];
+      })
+    );
 
     return config;
   },
