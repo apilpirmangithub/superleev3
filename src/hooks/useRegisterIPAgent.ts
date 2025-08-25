@@ -32,6 +32,14 @@ export function useRegisterIPAgent() {
 
   const executeRegister = useCallback(async (intent: RegisterIntent, file: File) => {
     try {
+      // Validate SPG collection address
+      console.log('🔍 SPG Collection Address being used:', SPG_COLLECTION_ADDRESS);
+      if (SPG_COLLECTION_ADDRESS === "0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc") {
+        console.log('✅ Using correct SPG collection address');
+      } else {
+        console.warn('⚠️ SPG collection address might be incorrect');
+      }
+
       // Ensure we're on the right network
       await ensureAeneid();
 
