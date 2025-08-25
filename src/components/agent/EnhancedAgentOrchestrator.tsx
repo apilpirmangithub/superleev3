@@ -256,7 +256,7 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
 
   return (
     <div className="mx-auto max-w-[1400px] px-2 sm:px-4 md:px-6 overflow-x-hidden">
-      <div className="flex flex-col lg:grid lg:grid-cols-[300px,1fr] gap-3 lg:gap-6 h-[calc(100vh-120px)] lg:h-[calc(100vh-180px)]">
+      <div className="flex flex-col lg:grid lg:grid-cols-[220px,1fr] gap-3 lg:gap-6 h-[calc(100vh-120px)] lg:h-[calc(100vh-180px)]">
         {/* History Sidebar - Hidden on mobile, shown on desktop */}
         <div className="hidden lg:block">
           <HistorySidebar
