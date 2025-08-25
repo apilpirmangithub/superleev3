@@ -48,6 +48,10 @@ export function useChatAgent() {
     setMessages((prev) => [...prev, { role, text, ts: Date.now(), buttons }]);
   }, []);
 
+  const addCompleteMessage = useCallback((message: Message) => {
+    setMessages((prev) => [...prev, message]);
+  }, []);
+
   const simulateTyping = useCallback((callback: () => void, delay = 800) => {
     setIsTyping(true);
     setTimeout(() => {
