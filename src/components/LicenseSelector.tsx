@@ -2,11 +2,16 @@
 
 import React, { useState } from "react";
 import { Check, Info } from "lucide-react";
-import { 
-  LICENSE_DESCRIPTIONS, 
+import {
+  LICENSE_DESCRIPTIONS,
   DEFAULT_LICENSE_SETTINGS,
-  type LicenseType, 
-  type LicenseSettings 
+  hasCommercialUse,
+  hasDerivativesAllowed,
+  hasAttributionRequired,
+  hasRevenueSharing,
+  hasFreeLicense,
+  type LicenseType,
+  type LicenseSettings
 } from "@/lib/license/terms";
 
 interface LicenseSelectorProps {
