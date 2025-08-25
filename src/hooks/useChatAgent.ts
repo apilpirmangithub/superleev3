@@ -17,15 +17,9 @@ export function useChatAgent() {
       if (saved) {
         const loadedMessages = JSON.parse(saved);
         setMessages(loadedMessages);
-        // Don't show greeting if we have existing messages
-        if (loadedMessages.length === 0) {
-          showGreeting();
-        }
-      } else {
-        showGreeting();
       }
     } catch {
-      showGreeting();
+      // Ignore errors, start with empty chat
     }
   }, []);
 
