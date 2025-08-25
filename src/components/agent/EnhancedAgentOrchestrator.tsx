@@ -86,14 +86,12 @@ export function EnhancedAgentOrchestrator() {
 Note: AI-generated images cannot be licensed for AI training purposes - it doesn't make sense to train AI with AI-generated content again!`
         : `Analysis complete! Your image appears to be real/human-made with ${((result.confidence || 0) * 100).toFixed(1)}% confidence.`;
 
-      // Update the loading message to show results
+      // Update the loading message to show results with continue button
       chatAgent.updateLastMessage({
         text: detectionText,
-        isLoading: false
+        isLoading: false,
+        buttons: ["Continue Registration"]
       });
-
-      // Process the AI detection result with Superlee engine
-      chatAgent.processPrompt("AI analysis completed", currentFile, result);
     } catch (error) {
       console.error('AI detection failed:', error);
       setAiDetectionResult({
@@ -109,9 +107,6 @@ Note: AI-generated images cannot be licensed for AI training purposes - it doesn
         text: errorText,
         isLoading: false
       });
-
-      // Continue with file upload even if AI detection fails
-      chatAgent.processPrompt("AI analysis completed", currentFile, { isAI: false, confidence: 0 });
     } finally {
       setIsAnalyzing(false);
     }
