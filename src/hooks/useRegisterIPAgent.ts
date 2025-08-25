@@ -147,15 +147,21 @@ export function useRegisterIPAgent() {
       };
 
     } catch (error: any) {
+      const agentError: AgentError = {
+        message: error.message || String(error),
+        code: error.code,
+        details: error.details || { originalError: error }
+      };
+
       setRegisterState(prev => ({
         ...prev,
         status: 'error',
-        error: error.message || String(error)
+        error: agentError
       }));
 
       return {
         success: false,
-        error: error.message || String(error)
+        error: agentError.message
       };
     }
   }, [address, getClient, ensureAeneid]);
