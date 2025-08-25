@@ -2,23 +2,9 @@
  * Centralized constants for Story Protocol integration
  */
 
-// SPG Collection Contract Address
-// MUST be set via NEXT_PUBLIC_SPG_COLLECTION environment variable
-const spgCollectionFromEnv = process.env.NEXT_PUBLIC_SPG_COLLECTION;
-
-if (!spgCollectionFromEnv) {
-  throw new Error(
-    'NEXT_PUBLIC_SPG_COLLECTION environment variable is required. ' +
-    'Please set it in your .env.local file or deployment environment.'
-  );
-}
-
-// Validate the address format
-if (!spgCollectionFromEnv.match(/^0x[a-fA-F0-9]{40}$/)) {
-  throw new Error(`Invalid SPG collection address format: ${spgCollectionFromEnv}`);
-}
-
-export const SPG_COLLECTION_ADDRESS = spgCollectionFromEnv as `0x${string}`;
+// SPG Collection Contract Address - from environment variable
+export const SPG_COLLECTION_ADDRESS = (process.env.NEXT_PUBLIC_SPG_COLLECTION ||
+  "0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc") as `0x${string}`;
 
 // Story Protocol configuration
 export const STORY_CONFIG = {
