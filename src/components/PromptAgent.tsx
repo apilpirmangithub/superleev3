@@ -207,12 +207,7 @@ export default function PromptAgent() {
     }
     setPlan(d.plan);
     setIntent(d.intent);
-    push(
-      "agent",
-      ["Plan:", ...d.plan.map((s: string, i: number) => `${i + 1}. ${s}`)].join(
-        "\n"
-      )
-    );
+    // Plan will be shown in PlanBox only, no need for chat message
   }
 
   async function onConfirm() {
