@@ -1,250 +1,246 @@
 "use client";
-import { useStoryClient } from "@/lib/storyClient";
-import { useAccount } from "wagmi";
-import { toHex } from "viem";
-import { useState } from "react";
-import { DEFAULT_LICENSE_SETTINGS, createLicenseTerms, STORY_CONTRACTS } from "@/lib/license/terms";
-import { detectAI, fileToBuffer } from "@/services";
-import type { LicenseSettings } from "@/lib/license/terms";
 
-async function sha256Hex(file: File): Promise<`0x${string}`> {
-  const buf = await file.arrayBuffer();
-  const hash = await crypto.subtle.digest("SHA-256", buf);
-  return toHex(new Uint8Array(hash), { size: 32 });
+import React, { useState, useEffect } from "react";
+import { Upload, X, FileImage, Sparkles } from "lucide-react";
+import { LicenseSelector } from "./LicenseSelector";
+import { AIDetectionDisplay } from "./AIDetectionDisplay";
+import { useFileUpload } from "@/hooks/useFileUpload";
+import { detectAI, fileToBuffer } from "@/services";
+import { DEFAULT_LICENSE_SETTINGS, type LicenseSettings } from "@/lib/license/terms";
+
+interface RegisterIPPanelProps {
+  onRegister?: (file: File, title: string, description: string, license: LicenseSettings, aiResult?: any) => void;
+  className?: string;
 }
 
-export default function RegisterIPPanel() {
-  const { address, isConnected } = useAccount();
-  const { getClient } = useStoryClient();
-  const [file, setFile] = useState<File | null>(null);
-  const [prompt, setPrompt] = useState("");
-  const [status, setStatus] = useState("");
-  const [licenseSettings, setLicenseSettings] = useState<LicenseSettings>(DEFAULT_LICENSE_SETTINGS);
-  const [aiDetection, setAiDetection] = useState<{ isAI: boolean; confidence: number } | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+export function RegisterIPPanel({ onRegister, className = "" }: RegisterIPPanelProps) {
+  const fileUpload = useFileUpload();
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedLicense, setSelectedLicense] = useState<LicenseSettings>(DEFAULT_LICENSE_SETTINGS);
+  const [aiDetectionResult, setAiDetectionResult] = useState<any>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showLicenseSelector, setShowLicenseSelector] = useState(false);
 
-  async function uploadFileToIPFS(f: File) {
-    const fd = new FormData();
-    fd.append("file", f);
-    const res = await fetch("/api/ipfs/file", { method: "POST", body: fd });
-    if (!res.ok) throw new Error("file upload failed");
-    return await res.json(); // { cid, url }
-  }
-
-  async function uploadJSONToIPFS(obj: any) {
-    const res = await fetch("/api/ipfs/json", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(obj) });
-    if (!res.ok) throw new Error("json upload failed");
-    return await res.json(); // { cid, url, hash }
-  }
-
-  async function onFileChange(selectedFile: File | null) {
-    setFile(selectedFile);
-    setAiDetection(null);
-
-    if (selectedFile) {
-      // Run AI detection
-      try {
-        const buffer = await fileToBuffer(selectedFile);
-        const detection = await detectAI(buffer);
-        setAiDetection(detection);
-
-        // Auto-adjust license settings for AI content
-        if (detection.isAI) {
-          setLicenseSettings(prev => ({ ...prev, aiLearning: false }));
-        }
-      } catch (error) {
-        console.error('AI detection failed:', error);
-      }
+  // Auto-analyze when file is uploaded
+  useEffect(() => {
+    if (fileUpload.file && !isAnalyzing) {
+      analyzeImage();
     }
-  }
+  }, [fileUpload.file]);
 
-  async function onSubmit() {
+  const analyzeImage = async () => {
+    if (!fileUpload.file) return;
+
+    setIsAnalyzing(true);
+    setAiDetectionResult(null);
+
     try {
-      if (!file) return;
-      setStatus("Uploading image...");
-      const media = await uploadFileToIPFS(file);
-      const mediaHash = await sha256Hex(file);
-
-      const ipMetadata = {
-        title: file.name,
-        description: prompt || "",
-        image: media.url,
-        imageHash: mediaHash,
-        mediaUrl: media.url,
-        mediaHash: mediaHash,
-        mediaType: file.type,
-        creators: address ? [{ name: address, address, contributionPercent: 100 }] : [],
-        aiMetadata: prompt ? { prompt, generator: "user", model: "unknown" } : undefined,
-        ...(aiDetection?.isAI && {
-          tags: ["AI-generated"],
-          aiGenerated: true,
-          aiConfidence: aiDetection.confidence,
-        }),
-      };
-
-      setStatus("Uploading metadata...");
-      const ipMetaUpload = await uploadJSONToIPFS(ipMetadata);
-
-      const nftMetadata = {
-        name: `IP Ownership — ${file.name}`,
-        description: "Ownership NFT for IP Asset",
-        image: media.url,
-        attributes: [
-          { trait_type: "Type", value: aiDetection?.isAI ? "AI-generated" : "Original" },
-          { trait_type: "License Type", value: licenseSettings.pilType },
-          { trait_type: "Commercial Use", value: licenseSettings.commercialUse ? "Yes" : "No" },
-          { trait_type: "AI Learning Allowed", value: licenseSettings.aiLearning ? "Yes" : "No" },
-        ],
-      };
-      const nftMetaUpload = await uploadJSONToIPFS(nftMetadata);
-
-      setStatus("Registering on Story...");
-      const client = await getClient();
-
-      // Use enhanced registration with license terms
-      const licenseTermsData = createLicenseTerms(licenseSettings);
-
-      const res = await client.ipAsset.mintAndRegisterIpAssetWithPilTerms({
-        spgNftContract: STORY_CONTRACTS.SPG_COLLECTION,
-        licenseTermsData: [licenseTermsData],
-        ipMetadata: {
-          ipMetadataURI: ipMetaUpload.url,
-          ipMetadataHash: ipMetaUpload.hash,
-          nftMetadataURI: nftMetaUpload.url,
-          nftMetadataHash: nftMetaUpload.hash,
-        },
+      const buffer = await fileToBuffer(fileUpload.file);
+      const result = await detectAI(buffer);
+      setAiDetectionResult({
+        ...result,
+        status: 'completed'
       });
-
-      setStatus(`Registered with ${licenseSettings.pilType} license!\nipId: ${res.ipId}\nTx: ${res.txHash}`);
-    } catch (e: any) {
-      setStatus(e?.message || "Register error");
+    } catch (error) {
+      console.error('AI detection failed:', error);
+      setAiDetectionResult({
+        isAI: false,
+        confidence: 0,
+        status: 'failed'
+      });
+    } finally {
+      setIsAnalyzing(false);
     }
-  }
+  };
+
+  const handleRegister = () => {
+    if (fileUpload.file && onRegister) {
+      onRegister(fileUpload.file, title, description, selectedLicense, aiDetectionResult);
+    }
+  };
+
+  const canRegister = fileUpload.file && title.trim() && description.trim();
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3">
-        <div>
-          <label className="block font-medium mb-2">Prompt (optional)</label>
-          <textarea
-            value={prompt}
-            onChange={e=>setPrompt(e.target.value)}
-            placeholder="Describe your work..."
-            className="w-full min-h-[100px] p-3 border border-ai-border rounded-xl bg-ai-card focus:border-ai-primary focus:outline-none"
-          />
+    <div className={`space-y-6 ${className}`}>
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <div className="flex items-center justify-center gap-2">
+          <Sparkles className="h-6 w-6 text-purple-400" />
+          <h2 className="text-xl font-semibold text-white">Daftarkan IP Anda</h2>
         </div>
-        <div>
-          <label className="block font-medium mb-2">Image</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={e=>onFileChange(e.target.files?.[0]||null)}
-            className="w-full p-2 border border-ai-border rounded-lg bg-ai-card"
-          />
-          {aiDetection && (
-            <div className={`mt-2 p-3 rounded-lg text-sm ${
-              aiDetection.isAI
-                ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                : 'bg-green-100 text-green-800 border border-green-200'
-            }`}>
-              <div className="font-semibold">
-                {aiDetection.isAI ? '🤖 AI-Generated Content Detected' : '✨ Original Content'}
-              </div>
-              <div className="text-xs opacity-75">
-                Confidence: {(aiDetection.confidence * 100).toFixed(0)}%
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* License Settings Toggle */}
-        <div className="border-t border-ai-border pt-4">
-          <button
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="text-sm text-ai-primary hover:text-ai-accent font-medium"
-          >
-            {showAdvanced ? '▼' : '▶'} Advanced License Settings
-          </button>
-
-          {showAdvanced && (
-            <div className="mt-4 space-y-3 p-4 bg-gray-50 rounded-xl">
-              <div>
-                <label className="block font-medium mb-2">License Type</label>
-                <select
-                  value={licenseSettings.pilType}
-                  onChange={e => setLicenseSettings(prev => ({ ...prev, pilType: e.target.value as any }))}
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                >
-                  <option value="open_use">🎁 Open Use (Free)</option>
-                  <option value="non_commercial_remix">🔄 Non-Commercial Remix</option>
-                  <option value="commercial_use">💼 Commercial Use</option>
-                  <option value="commercial_remix">🎨 Commercial Remix</option>
-                </select>
-              </div>
-
-              {(licenseSettings.pilType === 'commercial_use' || licenseSettings.pilType === 'commercial_remix') && (
-                <div>
-                  <label className="block font-medium mb-2">License Price ($IP)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={licenseSettings.licensePrice}
-                    onChange={e => setLicenseSettings(prev => ({ ...prev, licensePrice: parseFloat(e.target.value) || 0 }))}
-                    className="w-full p-2 border border-gray-300 rounded-lg"
-                    placeholder="0.00"
-                  />
-                </div>
-              )}
-
-              {licenseSettings.pilType === 'commercial_remix' && (
-                <div>
-                  <label className="block font-medium mb-2">Revenue Share (%)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={licenseSettings.revShare}
-                    onChange={e => setLicenseSettings(prev => ({ ...prev, revShare: parseInt(e.target.value) || 0 }))}
-                    className="w-full p-2 border border-gray-300 rounded-lg"
-                    placeholder="0"
-                  />
-                </div>
-              )}
-
-              {!aiDetection?.isAI && (
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">Allow AI Training</span>
-                  <button
-                    onClick={() => setLicenseSettings(prev => ({ ...prev, aiLearning: !prev.aiLearning }))}
-                    className={`relative w-12 h-6 rounded-full transition-colors ${
-                      licenseSettings.aiLearning ? 'bg-ai-primary' : 'bg-gray-300'
-                    }`}
-                  >
-                    <div className={`absolute w-4 h-4 bg-white rounded-full top-1 transition-transform ${
-                      licenseSettings.aiLearning ? 'translate-x-7' : 'translate-x-1'
-                    }`} />
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            onClick={onSubmit}
-            disabled={!isConnected || !file}
-            className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Upload & Register with License
-          </button>
-        </div>
+        <p className="text-sm text-white/70">Upload gambar, pilih lisensi, dan daftarkan sebagai IP di Story Protocol</p>
       </div>
-      {status && (
-        <div className="bg-gray-50 p-4 rounded-xl">
-          <div className="text-sm font-medium mb-2">Registration Status:</div>
-          <pre className="text-xs overflow-auto whitespace-pre-wrap">{status}</pre>
+
+      {/* File Upload */}
+      <div className="space-y-4">
+        {!fileUpload.file ? (
+          <div
+            onClick={() => document.getElementById('file-input')?.click()}
+            className="relative border-2 border-dashed border-white/20 rounded-xl p-8 text-center hover:border-white/30 hover:bg-white/5 transition-all cursor-pointer group"
+          >
+            <input
+              id="file-input"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => fileUpload.handleFileSelect(e.target.files?.[0])}
+            />
+            
+            <div className="space-y-3">
+              <div className="mx-auto w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center group-hover:bg-purple-500/30 transition-colors">
+                <Upload className="h-8 w-8 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-white font-medium">Pilih gambar untuk didaftarkan</p>
+                <p className="text-sm text-white/60">PNG, JPG, GIF hingga 10MB</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="relative rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="flex items-start gap-4">
+              <div className="relative">
+                <img
+                  src={fileUpload.previewUrl!}
+                  alt="Preview"
+                  className="w-20 h-20 rounded-lg object-cover"
+                />
+                <button
+                  onClick={fileUpload.removeFile}
+                  className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <FileImage className="h-4 w-4 text-purple-400" />
+                  <span className="font-medium text-white truncate">{fileUpload.file.name}</span>
+                </div>
+                <p className="text-xs text-white/60">
+                  {(fileUpload.file.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+                <button
+                  onClick={analyzeImage}
+                  className="mt-2 text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors"
+                  disabled={isAnalyzing}
+                >
+                  {isAnalyzing ? 'Menganalisis...' : 'Analisis Ulang'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* AI Detection Results */}
+      {(fileUpload.file && (isAnalyzing || aiDetectionResult)) && (
+        <AIDetectionDisplay
+          result={aiDetectionResult}
+          isAnalyzing={isAnalyzing}
+        />
+      )}
+
+      {/* IP Metadata */}
+      {fileUpload.file && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+            Informasi IP
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                Judul IP *
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Masukkan judul untuk IP Anda"
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/50 focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                Deskripsi *
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Deskripsikan IP Anda..."
+                rows={3}
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/50 focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30 focus:outline-none resize-none"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* License Selection */}
+      {fileUpload.file && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+              Pengaturan Lisensi
+            </div>
+            <button
+              onClick={() => setShowLicenseSelector(!showLicenseSelector)}
+              className="text-xs px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors"
+            >
+              {showLicenseSelector ? 'Sembunyikan' : 'Pilih Lisensi'}
+            </button>
+          </div>
+
+          {/* Current license preview */}
+          <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-400/20">
+            <div className="text-sm font-medium text-purple-300 mb-1">Lisensi Aktif:</div>
+            <div className="text-sm text-white/80">
+              {selectedLicense.pilType === 'open_use' && '🎁 Open Use - Gratis untuk penggunaan non-komersial'}
+              {selectedLicense.pilType === 'non_commercial_remix' && '🔄 Non-Commercial Remix - Boleh remix, tidak komersial'}
+              {selectedLicense.pilType === 'commercial_use' && '💼 Commercial Use - Boleh komersial, tidak boleh remix'}
+              {selectedLicense.pilType === 'commercial_remix' && '🎨 Commercial Remix - Boleh komersial + remix dengan bagi hasil'}
+            </div>
+          </div>
+
+          {/* License selector */}
+          {showLicenseSelector && (
+            <LicenseSelector
+              selectedLicense={selectedLicense}
+              onLicenseChange={setSelectedLicense}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Register Button */}
+      {fileUpload.file && (
+        <button
+          onClick={handleRegister}
+          disabled={!canRegister}
+          className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 text-white font-medium hover:from-purple-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        >
+          {canRegister ? 'Daftarkan IP' : 'Lengkapi informasi untuk melanjutkan'}
+        </button>
+      )}
+
+      {/* Summary */}
+      {fileUpload.file && aiDetectionResult && canRegister && (
+        <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+          <h4 className="font-medium text-white mb-2">Ringkasan Pendaftaran:</h4>
+          <div className="text-sm space-y-1 text-white/70">
+            <p>• <strong>File:</strong> {fileUpload.file.name}</p>
+            <p>• <strong>Judul:</strong> {title}</p>
+            <p>• <strong>Deteksi AI:</strong> {aiDetectionResult.isAI ? 'Terdeteksi AI' : 'Original'} ({(aiDetectionResult.confidence * 100).toFixed(1)}%)</p>
+            <p>• <strong>Lisensi:</strong> {selectedLicense.pilType}</p>
+            <p>• <strong>Komersial:</strong> {selectedLicense.commercialUse ? 'Ya' : 'Tidak'}</p>
+          </div>
         </div>
       )}
     </div>
