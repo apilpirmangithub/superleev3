@@ -145,7 +145,7 @@ export function MessageList({ messages, onButtonClick, isTyping }: MessageListPr
                         <button
                           key={buttonIndex}
                           onClick={() => onButtonClick?.(button)}
-                          className="px-3 py-2 text-sm rounded-lg bg-sky-500/90 hover:bg-sky-400 text-white border border-sky-400/30 transition-all duration-200 hover:scale-105 hover:shadow-lg"
+                          className="px-3 py-2 text-sm rounded-lg bg-sky-500/90 hover:bg-sky-400 text-white border border-sky-400/30 transition-bounce hover:scale-105 hover:shadow-xl hover-lift"
                         >
                           {button}
                         </button>
