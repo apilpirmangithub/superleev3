@@ -15,6 +15,7 @@ export type RegisterIntent = {
   title?: string;
   prompt?: string;
   license?: "by" | "by-nc" | "by-nd" | "by-sa" | "cc0" | "arr";
+  pilType?: "open_use" | "non_commercial_remix" | "commercial_use" | "commercial_remix";
 };
 
 export type Ask = { type: "ask"; question: string };
