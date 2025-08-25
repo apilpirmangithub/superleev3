@@ -4,10 +4,6 @@
 
 // SPG Collection Contract Address
 // MUST be set via NEXT_PUBLIC_SPG_COLLECTION environment variable
-console.log('🔍 Debug: All NEXT_PUBLIC env vars:', Object.keys(process.env).filter(k => k.startsWith('NEXT_PUBLIC')));
-console.log('🔍 Debug: Raw NEXT_PUBLIC_SPG_COLLECTION value:', process.env.NEXT_PUBLIC_SPG_COLLECTION);
-console.log('🔍 Debug: process.env type:', typeof process.env.NEXT_PUBLIC_SPG_COLLECTION);
-
 const spgCollectionFromEnv = process.env.NEXT_PUBLIC_SPG_COLLECTION;
 
 if (!spgCollectionFromEnv) {
@@ -23,10 +19,6 @@ if (!spgCollectionFromEnv.match(/^0x[a-fA-F0-9]{40}$/)) {
 }
 
 export const SPG_COLLECTION_ADDRESS = spgCollectionFromEnv as `0x${string}`;
-
-console.log('🏭 SPG Collection Address loaded from environment:', SPG_COLLECTION_ADDRESS);
-console.log('🔍 Debug: Expected address:', '0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc');
-console.log('🔍 Debug: Addresses match:', SPG_COLLECTION_ADDRESS === '0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc');
 
 // Story Protocol configuration
 export const STORY_CONFIG = {
