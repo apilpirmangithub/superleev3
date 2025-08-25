@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     const url =
       (PINATA_GATEWAY ? `${PINATA_GATEWAY}` : "https://ipfs.io") + `/ipfs/${cid}`;
 
-    return NextResponse.json({ cid, url, keccak, raw: up }, { status: 200 });
+    return NextResponse.json({ cid, url, keccak }, { status: 200 });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? String(e) }, { status: 500 });
   }
