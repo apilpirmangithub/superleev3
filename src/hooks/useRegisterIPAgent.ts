@@ -114,18 +114,53 @@ export function useRegisterIPAgent() {
       }));
 
       // 7. Mint and register IP on Story Protocol
+      console.log('🔍 Using SPG Collection Address:', SPG_COLLECTION_ADDRESS);
+      console.log('📝 IP Metadata URI:', ipMetadataURI);
+      console.log('🔐 IP Metadata Hash:', ipMetadataHash);
+      console.log('📝 NFT Metadata URI:', nftMetadataURI);
+      console.log('🔐 NFT Metadata Hash:', nftMetadataHash);
+
       const client = await getClient();
-      const result = await client.ipAsset.mintAndRegisterIp({
-        spgNftContract: SPG_COLLECTION_ADDRESS,
-        recipient: address as `0x${string}`,
-        ipMetadata: {
-          ipMetadataURI,
-          ipMetadataHash,
-          nftMetadataURI,
-          nftMetadataHash,
-        },
-        allowDuplicates: true,
-      });
+
+      try {
+        const result = await client.ipAsset.mintAndRegisterIp({
+          spgNftContract: SPG_COLLECTION_ADDRESS,
+          recipient: address as `0x${string}`,
+          ipMetadata: {
+            ipMetadataURI,
+            ipMetadataHash,
+            nftMetadataURI,
+            nftMetadataHash,
+          },
+          allowDuplicates: true,
+        });
+
+        console.log('✅ Registration successful:', result);
+        return result;
+      } catch (contractError: any) {
+        console.error('❌ Contract Error Details:', {
+          message: contractError.message,
+          cause: contractError.cause,
+          details: contractError.details,
+          spgContract: SPG_COLLECTION_ADDRESS,
+          recipient: address,
+        });
+
+        // Provide more specific error messages
+        if (contractError.message?.includes('execution reverted')) {
+          throw new Error(
+            `Contract execution failed. This could be due to:\n` +
+            `• Invalid metadata format\n` +
+            `• Insufficient gas\n` +
+            `• Wrong SPG collection address\n` +
+            `• Network issues\n\n` +
+            `Using SPG: ${SPG_COLLECTION_ADDRESS}\n` +
+            `Original error: ${contractError.message}`
+          );
+        }
+
+        throw contractError;
+      }
 
       setRegisterState({
         status: 'success',
