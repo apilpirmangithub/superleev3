@@ -195,36 +195,56 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
   }, [fileUpload]);
 
   return (
-    <div className="mx-auto max-w-[1200px] px-4 md:px-6 overflow-x-hidden">
-      <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-6">
-        {/* History Sidebar */}
-        <HistorySidebar 
-          messages={chatAgent.messages}
-          onNewChat={chatAgent.newChat}
-        />
+    <div className="mx-auto max-w-[1400px] px-2 sm:px-4 md:px-6 overflow-x-hidden">
+      <div className="flex flex-col lg:grid lg:grid-cols-[300px,1fr] gap-3 lg:gap-6 h-[calc(100vh-120px)] lg:h-[calc(100vh-180px)]">
+        {/* History Sidebar - Hidden on mobile, shown on desktop */}
+        <div className="hidden lg:block">
+          <HistorySidebar
+            messages={chatAgent.messages}
+            onNewChat={chatAgent.newChat}
+          />
+        </div>
 
-        {/* Main Area with Tabs */}
-        <div className="h-[calc(100vh-180px)] overflow-hidden flex flex-col">
+        {/* Main Chat Area */}
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           {/* Header */}
-          <div className="shrink-0 mb-4">
-            <div className="flex rounded-xl bg-white/5 border border-white/10 p-1">
-              <div className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-sky-500/90 text-white text-center">
-                🔹 SUPERLEE ASSISTANT
+          <div className="shrink-0 mb-3 lg:mb-4">
+            <div className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 p-3 lg:p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center shadow-lg">
+                  <span className="text-lg font-bold text-white">S</span>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-white">SUPERLEE ASSISTANT</div>
+                  <div className="text-xs text-white/60">AI-powered blockchain assistant</div>
+                </div>
               </div>
+
+              {/* Mobile menu button for history */}
+              <button
+                onClick={chatAgent.newChat}
+                className="lg:hidden p-2 rounded-lg bg-white/10 hover:bg-white/15 transition-colors"
+                title="New Chat"
+              >
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
             </div>
           </div>
 
           {/* Chat Content */}
-          <section className="flex-1 rounded-2xl border border-white/10 bg-white/5 overflow-hidden flex flex-col">
+          <section className="flex-1 rounded-2xl border border-white/10 bg-white/5 overflow-hidden flex flex-col min-h-0">
             {/* Messages Area */}
             <div
               ref={chatScrollRef}
               className="flex-1 overflow-y-auto scrollbar-invisible"
             >
-              <div className="mx-auto w-full max-w-[820px] px-3 py-4">
+              <div className="mx-auto w-full max-w-[900px] px-2 sm:px-3 lg:px-4 py-3 lg:py-4">
                 <MessageList
                   messages={chatAgent.messages}
                   onButtonClick={handleButtonClick}
+                  isTyping={chatAgent.isTyping}
                 />
 
 
@@ -242,10 +262,17 @@ AI Detected: ${result.aiDetected ? 'Yes' : 'No'} (${((result.aiConfidence || 0) 
             </div>
 
             {/* Composer */}
-            <Composer
-              onSubmit={(prompt) => chatAgent.processPrompt(prompt, fileUpload.file || undefined, aiDetectionResult)}
-              status={chatAgent.status}
-            />
+            <div className="shrink-0">
+              <Composer
+                onSubmit={(prompt) => chatAgent.processPrompt(prompt, fileUpload.file || undefined, aiDetectionResult)}
+                status={chatAgent.status}
+                file={fileUpload.file}
+                onFileSelect={fileUpload.handleFileSelect}
+                onFileRemove={fileUpload.removeFile}
+                previewUrl={fileUpload.previewUrl}
+                isTyping={chatAgent.isTyping}
+              />
+            </div>
           </section>
         </div>
       </div>
